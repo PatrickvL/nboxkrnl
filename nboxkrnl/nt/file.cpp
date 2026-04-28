@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "nt.hpp"
@@ -375,4 +376,269 @@ EXPORTNUM(236) NTSTATUS XBOXAPI NtWriteFile
 	FileObject->Event.Header.SignalState = 0;
 
 	return IopSynchronousService(DeviceObject, Irp, FileObject, TRUE, IsSynchronousIo);
+}
+
+
+EXPORTNUM(226) NTSTATUS XBOXAPI NtSetInformationFile
+(
+	HANDLE FileHandle,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	PVOID FileInformation,
+	ULONG Length,
+	FILE_INFORMATION_CLASS FileInformationClass
+)
+{
+	if ((ULONG)FileInformationClass >= FileMaximumInformation) {
+		return STATUS_INVALID_INFO_CLASS;
+	}
+
+	PFILE_OBJECT FileObject;
+	NTSTATUS Status = ObReferenceObjectByHandle(FileHandle, &IoFileObjectType, (PVOID *)&FileObject);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	BOOLEAN IsSynchronousIo;
+	if (FileObject->Flags & FO_SYNCHRONOUS_IO) {
+		IopAcquireSynchronousFileLock(FileObject);
+		IsSynchronousIo = TRUE;
+	}
+	else {
+		IsSynchronousIo = FALSE;
+	}
+
+	PDEVICE_OBJECT DeviceObject = FileObject->DeviceObject;
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return IopCleanupFailedIrpAllocation(FileObject, nullptr);
+	}
+	Irp->Tail.Overlay.OriginalFileObject = FileObject;
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->UserBuffer = FileInformation;
+	Irp->Flags = IRP_DEFER_IO_COMPLETION;
+	if (IsSynchronousIo) {
+		Irp->UserIosb = IoStatusBlock;
+	}
+	else {
+		Irp->Flags |= IRP_SYNCHRONOUS_API;
+	}
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = IRP_MJ_SET_INFORMATION;
+	IrpStackPointer->FileObject = FileObject;
+	IrpStackPointer->Parameters.SetFile.Length = Length;
+	IrpStackPointer->Parameters.SetFile.FileInformationClass = FileInformationClass;
+
+	FileObject->Event.Header.SignalState = 0;
+
+	return IopSynchronousService(DeviceObject, Irp, FileObject, TRUE, IsSynchronousIo);
+}
+
+EXPORTNUM(198) NTSTATUS XBOXAPI NtFlushBuffersFile
+(
+	HANDLE FileHandle,
+	PIO_STATUS_BLOCK IoStatusBlock
+)
+{
+	PFILE_OBJECT FileObject;
+	NTSTATUS Status = ObReferenceObjectByHandle(FileHandle, &IoFileObjectType, (PVOID *)&FileObject);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	BOOLEAN IsSynchronousIo;
+	if (FileObject->Flags & FO_SYNCHRONOUS_IO) {
+		IopAcquireSynchronousFileLock(FileObject);
+		IsSynchronousIo = TRUE;
+	}
+	else {
+		IsSynchronousIo = FALSE;
+		RIP_API_MSG("Asynchronous IO is not supported");
+	}
+
+	PDEVICE_OBJECT DeviceObject = FileObject->DeviceObject;
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return IopCleanupFailedIrpAllocation(FileObject, nullptr);
+	}
+	Irp->Tail.Overlay.OriginalFileObject = FileObject;
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->Flags = IRP_SYNCHRONOUS_API | IRP_DEFER_IO_COMPLETION;
+	if (IsSynchronousIo) {
+		Irp->UserIosb = IoStatusBlock;
+	}
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = IRP_MJ_FLUSH_BUFFERS;
+	IrpStackPointer->FileObject = FileObject;
+
+	FileObject->Event.Header.SignalState = 0;
+
+	return IopSynchronousService(DeviceObject, Irp, FileObject, TRUE, IsSynchronousIo);
+}
+
+EXPORTNUM(200) NTSTATUS XBOXAPI NtFsControlFile
+(
+	HANDLE FileHandle,
+	HANDLE Event,
+	PIO_APC_ROUTINE ApcRoutine,
+	PVOID ApcContext,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	ULONG FsControlCode,
+	PVOID InputBuffer,
+	ULONG InputBufferLength,
+	PVOID OutputBuffer,
+	ULONG OutputBufferLength
+)
+{
+	PFILE_OBJECT FileObject;
+	NTSTATUS Status = ObReferenceObjectByHandle(FileHandle, &IoFileObjectType, (PVOID *)&FileObject);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	BOOLEAN IsSynchronousIo;
+	if (FileObject->Flags & FO_SYNCHRONOUS_IO) {
+		IopAcquireSynchronousFileLock(FileObject);
+		IsSynchronousIo = TRUE;
+	}
+	else {
+		IsSynchronousIo = FALSE;
+		RIP_API_MSG("Asynchronous IO is not supported");
+	}
+
+	PDEVICE_OBJECT DeviceObject = FileObject->DeviceObject;
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return IopCleanupFailedIrpAllocation(FileObject, nullptr);
+	}
+	Irp->Tail.Overlay.OriginalFileObject = FileObject;
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->Flags = IRP_DEFER_IO_COMPLETION;
+	if (IsSynchronousIo) {
+		Irp->UserIosb = IoStatusBlock;
+	}
+	else {
+		Irp->Flags |= IRP_SYNCHRONOUS_API;
+	}
+
+	// Xbox IRP doesn't have AssociatedIrp.SystemBuffer
+	// Pass input via Type3InputBuffer, output via UserBuffer
+	Irp->UserBuffer = OutputBuffer;
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = IRP_MJ_FILE_SYSTEM_CONTROL;
+	IrpStackPointer->FileObject = FileObject;
+	IrpStackPointer->Parameters.FileSystemControl.OutputBufferLength = OutputBufferLength;
+	IrpStackPointer->Parameters.FileSystemControl.InputBuffer = InputBuffer;
+	IrpStackPointer->Parameters.FileSystemControl.InputBufferLength = InputBufferLength;
+	IrpStackPointer->Parameters.FileSystemControl.FsControlCode = FsControlCode;
+
+	FileObject->Event.Header.SignalState = 0;
+
+	return IopSynchronousService(DeviceObject, Irp, FileObject, TRUE, IsSynchronousIo);
+}
+
+EXPORTNUM(207) NTSTATUS XBOXAPI NtQueryDirectoryFile
+(
+	HANDLE FileHandle,
+	HANDLE Event,
+	PIO_APC_ROUTINE ApcRoutine,
+	PVOID ApcContext,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	PVOID FileInformation,
+	ULONG Length,
+	FILE_INFORMATION_CLASS FileInformationClass,
+	PSTRING FileName,
+	BOOLEAN RestartScan
+)
+{
+	PFILE_OBJECT FileObject;
+	NTSTATUS Status = ObReferenceObjectByHandle(FileHandle, &IoFileObjectType, (PVOID *)&FileObject);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	BOOLEAN IsSynchronousIo;
+	if (FileObject->Flags & FO_SYNCHRONOUS_IO) {
+		IopAcquireSynchronousFileLock(FileObject);
+		IsSynchronousIo = TRUE;
+	}
+	else {
+		IsSynchronousIo = FALSE;
+		RIP_API_MSG("Asynchronous IO is not supported");
+	}
+
+	PKEVENT UserEvent = nullptr;
+	if (Event) {
+		Status = ObReferenceObjectByHandle(Event, &ExEventObjectType, (PVOID *)&UserEvent);
+		if (!NT_SUCCESS(Status)) {
+			if (IsSynchronousIo) IopReleaseSynchronousFileLock(FileObject);
+			ObfDereferenceObject(FileObject);
+			return Status;
+		}
+		KeResetEvent(UserEvent);
+	}
+
+	PDEVICE_OBJECT DeviceObject = FileObject->DeviceObject;
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return IopCleanupFailedIrpAllocation(FileObject, UserEvent);
+	}
+	Irp->Tail.Overlay.OriginalFileObject = FileObject;
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->UserBuffer = FileInformation;
+	Irp->Flags = IRP_DEFER_IO_COMPLETION;
+	if (IsSynchronousIo) {
+		Irp->UserIosb = IoStatusBlock;
+	}
+	else {
+		Irp->Flags |= IRP_SYNCHRONOUS_API;
+	}
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = IRP_MJ_DIRECTORY_CONTROL;
+	IrpStackPointer->MinorFunction = IRP_MN_QUERY_DIRECTORY;
+	IrpStackPointer->FileObject = FileObject;
+	IrpStackPointer->Parameters.QueryDirectory.Length = Length;
+	IrpStackPointer->Parameters.QueryDirectory.FileInformationClass = FileInformationClass;
+	IrpStackPointer->Parameters.QueryDirectory.FileName = FileName;
+	if (RestartScan) {
+		IrpStackPointer->Flags = SL_RESTART_SCAN;
+	}
+
+	FileObject->Event.Header.SignalState = 0;
+
+	return IopSynchronousService(DeviceObject, Irp, FileObject, TRUE, IsSynchronousIo);
+}
+
+EXPORTNUM(210) NTSTATUS XBOXAPI NtQueryFullAttributesFile
+(
+	POBJECT_ATTRIBUTES ObjectAttributes,
+	PFILE_NETWORK_OPEN_INFORMATION FileInformation
+)
+{
+	HANDLE FileHandle;
+	IO_STATUS_BLOCK IoStatusBlock;
+	NTSTATUS Status = NtOpenFile(
+		&FileHandle,
+		FILE_READ_ATTRIBUTES,
+		ObjectAttributes,
+		&IoStatusBlock,
+		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		0
+	);
+
+	if (NT_SUCCESS(Status)) {
+		Status = NtQueryInformationFile(
+			FileHandle,
+			&IoStatusBlock,
+			FileInformation,
+			sizeof(FILE_NETWORK_OPEN_INFORMATION),
+			FileNetworkOpenInformation
+		);
+		NtClose(FileHandle);
+	}
+
+	return Status;
 }
