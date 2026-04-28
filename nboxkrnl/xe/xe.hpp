@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -40,6 +41,12 @@ EXPORTNUM(328) DLLEXPORT NTSTATUS XBOXAPI XeUnloadSection
 (
 	PXBE_SECTION Section
 );
+
+EXPORTNUM(323) DLLEXPORT extern XBOX_KEY_DATA XboxHDKey;
+
+EXPORTNUM(353) DLLEXPORT extern XBOX_KEY_DATA XboxLANKey;
+
+EXPORTNUM(355) DLLEXPORT extern XBOX_KEY_DATA XePublicKeyData;
 
 #ifdef __cplusplus
 }

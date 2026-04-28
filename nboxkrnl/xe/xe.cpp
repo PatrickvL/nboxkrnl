@@ -25,6 +25,12 @@
 #define XOR_KT_DEBUG 0xEFB1F152
 
 // Required to make sure that XBE_CERTIFICATE has the correct size
+EXPORTNUM(323) XBOX_KEY_DATA XboxHDKey = { 0 };
+
+EXPORTNUM(353) XBOX_KEY_DATA XboxLANKey = { 0 };
+
+EXPORTNUM(355) XBOX_KEY_DATA XePublicKeyData = { 0 };
+
 static_assert(sizeof(wchar_t) == 2);
 
 
