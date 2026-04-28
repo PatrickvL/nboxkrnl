@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -64,6 +65,11 @@ EXPORTNUM(47) DLLEXPORT VOID XBOXAPI HalRegisterShutdownNotification
 EXPORTNUM(48) DLLEXPORT VOID FASTCALL HalRequestSoftwareInterrupt
 (
 	KIRQL Request
+);
+
+EXPORTNUM(49) DLLEXPORT VOID XBOXAPI HalReturnToFirmware
+(
+	ULONG Routine
 );
 
 EXPORTNUM(50) DLLEXPORT NTSTATUS XBOXAPI HalWriteSMBusValue

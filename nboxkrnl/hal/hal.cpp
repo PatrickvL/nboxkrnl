@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "hal.hpp"
@@ -175,6 +176,15 @@ EXPORTNUM(47) VOID XBOXAPI HalRegisterShutdownNotification
 	}
 
 	KfLowerIrql(OldIrql);
+}
+
+EXPORTNUM(49) VOID XBOXAPI HalReturnToFirmware
+(
+	ULONG Routine
+)
+{
+	// On a real Xbox this reboots or powers off. In the emulator we just halt.
+	RIP_API_MSG("halting");
 }
 
 EXPORTNUM(50) NTSTATUS XBOXAPI HalWriteSMBusValue

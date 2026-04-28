@@ -1,14 +1,16 @@
 /*
  * ergo720                Copyright (c) 2022
  * LukeUsher              Copyright (c) 2017
+ * PatrickvL              Copyright (c) 2026
  */
 
-#include "ke.hpp"
-#include "xe.hpp"
+#include "dbg.hpp"
 #include "ex.hpp"
-#include "nt.hpp"
+#include "ke.hpp"
 #include "mi.hpp"
+#include "nt.hpp"
 #include "obp.hpp"
+#include "xe.hpp"
 #include <string.h>
 
 #define XBE_BASE_ADDRESS 0x10000
@@ -31,6 +33,12 @@ EXPORTNUM(164) PLAUNCH_DATA_PAGE LaunchDataPage = nullptr;
 EXPORTNUM(326) OBJECT_STRING XeImageFileName = { 0, 0, nullptr };
 
 static INITIALIZE_GLOBAL_CRITICAL_SECTION(XepXbeLoaderLock);
+
+// Stub for unimplemented kernel thunk entries — returns 0 instead of crashing.
+static ULONG XBOXAPI KernelThunkStub()
+{
+	return 0;
+}
 
 
 // Source: partially from Cxbx-Reloaded
@@ -174,7 +182,12 @@ static NTSTATUS XeLoadXbe()
 		unsigned i = 0;
 		while (XbeKrnlThunk[i]) {
 			ULONG t = XbeKrnlThunk[i] & 0x7FFFFFFF;
-			XbeKrnlThunk[i] = KernelThunkTable[t];
+			if (KernelThunkTable[t]) {
+				XbeKrnlThunk[i] = KernelThunkTable[t];
+			} else {
+				DbgPrint("WARNING: XBE import ordinal %d is unimplemented (stub)\n", t);
+				XbeKrnlThunk[i] = (ULONG)KernelThunkStub;
+			}
 			++i;
 		}
 

@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "av.hpp"
@@ -70,7 +71,7 @@ ULONG KernelThunkTable[379] =
 	(ULONG)FUNC(&HalReadWritePCISpace),                    // 0x002E (46)
 	(ULONG)FUNC(&HalRegisterShutdownNotification),         // 0x002F (47)
 	(ULONG)FUNC(&HalRequestSoftwareInterrupt),             // 0x0030 (48)
-	(ULONG)FUNC(nullptr), //(ULONG)FUNC(&HalReturnToFirmware),                     // 0x0031 (49)
+	(ULONG)FUNC(&HalReturnToFirmware),                     // 0x0031 (49)
 	(ULONG)FUNC(&HalWriteSMBusValue),                      // 0x0032 (50)
 	(ULONG)FUNC(&InterlockedCompareExchange),        // 0x0033 (51)
 	(ULONG)FUNC(&InterlockedDecrement),              // 0x0034 (52)
