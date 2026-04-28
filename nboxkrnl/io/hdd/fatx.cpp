@@ -73,6 +73,7 @@ static NTSTATUS XBOXAPI FatxIrpClose(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpRead(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpWrite(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpQueryInformation(PDEVICE_OBJECT DeviceObject, PIRP Irp);
+static NTSTATUS XBOXAPI FatxIrpSetInformation(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpQueryVolumeInformation(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp);
 static NTSTATUS XBOXAPI FatxIrpCleanup(PDEVICE_OBJECT DeviceObject, PIRP Irp);
@@ -87,7 +88,7 @@ static DRIVER_OBJECT FatxDriverObject = {
 		FatxIrpRead,                    // IRP_MJ_READ
 		FatxIrpWrite,                   // IRP_MJ_WRITE
 		FatxIrpQueryInformation,        // IRP_MJ_QUERY_INFORMATION
-		IopUnimplementedDeviceRequest,  // IRP_MJ_SET_INFORMATION
+		FatxIrpSetInformation,          // IRP_MJ_SET_INFORMATION
 		IopUnimplementedDeviceRequest,  // IRP_MJ_FLUSH_BUFFERS
 		FatxIrpQueryVolumeInformation,  // IRP_MJ_QUERY_VOLUME_INFORMATION
 		IopUnimplementedDeviceRequest,  // IRP_MJ_DIRECTORY_CONTROL
@@ -1020,6 +1021,46 @@ static NTSTATUS XBOXAPI FatxIrpQueryInformation(PDEVICE_OBJECT DeviceObject, PIR
 	}
 
 	Irp->IoStatus.Information = BytesWritten;
+	return FatxCompleteRequest(Irp, Status, VolumeExtension);
+}
+
+static NTSTATUS XBOXAPI FatxIrpSetInformation(PDEVICE_OBJECT DeviceObject, PIRP Irp)
+{
+	PFAT_VOLUME_EXTENSION VolumeExtension = (PFAT_VOLUME_EXTENSION)DeviceObject->DeviceExtension;
+	FatxVolumeLockExclusive(VolumeExtension);
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetCurrentIrpStackLocation(Irp);
+	PFILE_OBJECT FileObject = IrpStackPointer->FileObject;
+
+	if (VolumeExtension->Flags & FATX_VOLUME_DISMOUNTED) {
+		return FatxCompleteRequest(Irp, STATUS_VOLUME_DISMOUNTED, VolumeExtension);
+	}
+
+	if (FileObject->Flags & FO_CLEANUP_COMPLETE) {
+		return FatxCompleteRequest(Irp, STATUS_FILE_CLOSED, VolumeExtension);
+	}
+
+	NTSTATUS Status = STATUS_SUCCESS;
+	switch (IrpStackPointer->Parameters.SetFile.FileInformationClass)
+	{
+	case FilePositionInformation:
+		FileObject->CurrentByteOffset = PFILE_POSITION_INFORMATION(Irp->UserBuffer)->CurrentByteOffset;
+		break;
+
+	case FileEndOfFileInformation:
+		// Silently accept truncation/extension requests (host file system manages actual size)
+		break;
+
+	case FileDispositionInformation:
+		// Mark for deletion on close - not fully implemented but don't abort
+		break;
+
+	default:
+		Status = STATUS_INVALID_PARAMETER;
+		break;
+	}
+
+	Irp->IoStatus.Information = 0;
 	return FatxCompleteRequest(Irp, Status, VolumeExtension);
 }
 

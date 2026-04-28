@@ -330,7 +330,123 @@ EXPORTNUM(199) NTSTATUS XBOXAPI NtFreeVirtualMemory
 	ULONG FreeType
 )
 {
-	RIP_UNIMPLEMENTED();
+	ULONG CapturedBase = *(ULONG *)BaseAddress;
+	ULONG CapturedSize = *FreeSize;
+
+	// Validate FreeType
+	if ((FreeType & ~(MEM_DECOMMIT | MEM_RELEASE)) != 0) {
+		return STATUS_INVALID_PARAMETER;
+	}
+	if ((FreeType & (MEM_DECOMMIT | MEM_RELEASE)) == 0) {
+		return STATUS_INVALID_PARAMETER;
+	}
+	if ((FreeType & (MEM_DECOMMIT | MEM_RELEASE)) == (MEM_DECOMMIT | MEM_RELEASE)) {
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	ULONG AlignedBase = ROUND_DOWN_4K(CapturedBase);
+	ULONG AlignedSize;
+
+	if (FreeType & MEM_RELEASE) {
+		// For MEM_RELEASE, size must be zero (free entire VAD) or base must be at the start of an allocation
+		if (CapturedSize != 0) {
+			// Windows requires size == 0 for MEM_RELEASE of the entire region
+			// Xbox kernel also appears to accept non-zero sizes for partial release
+			AlignedSize = ROUND_UP_4K(CapturedSize);
+		}
+		else {
+			// Need to look up the VAD to determine the size
+			AlignedSize = 0; // will be filled below from the VAD
+		}
+	}
+	else {
+		// MEM_DECOMMIT
+		if (CapturedSize == 0) {
+			return STATUS_INVALID_PARAMETER;
+		}
+		AlignedSize = (PAGES_SPANNED(CapturedBase, CapturedSize)) << PAGE_SHIFT;
+	}
+
+	VadLock();
+
+	if (FreeType & MEM_RELEASE) {
+		if (AlignedSize == 0) {
+			// Look up the VAD to get the actual allocation size
+			BOOLEAN Overflow;
+			VAD_NODE *Node = CheckConflictingVAD(AlignedBase, PAGE_SIZE, &Overflow);
+			if (Node == nullptr) {
+				VadUnlock();
+				return ((NTSTATUS)0xC00000A0L);
+			}
+			AlignedBase = Node->m_Start;
+			AlignedSize = Node->m_Vad.m_Size;
+		}
+	}
+	else {
+		// MEM_DECOMMIT: verify the region is inside a reserved VAD
+		BOOLEAN Overflow;
+		VAD_NODE *Node = CheckConflictingVAD(AlignedBase, AlignedSize, &Overflow);
+		if (Node == nullptr || Overflow) {
+			VadUnlock();
+			return ((NTSTATUS)0xC00000A0L);
+		}
+	}
+
+	// Free the physical pages
+	KIRQL OldIrql = MiLock();
+
+	PMMPTE PointerPte = GetPteAddress(AlignedBase);
+	PMMPTE EndingPte = GetPteAddress(AlignedBase + AlignedSize - 1);
+
+	while (PointerPte <= EndingPte) {
+		if ((PointerPte == GetPteAddress(AlignedBase)) || IsPteOnPdeBoundary(PointerPte)) {
+			PMMPTE PointerPde = GetPteAddress(PointerPte);
+			if ((PointerPde->Hw & PTE_VALID_MASK) == 0) {
+				// PDE not valid, skip this entire page table range
+				PMMPTE NextPointerPte = (PMMPTE)GetVAddrMappedByPte(PointerPde + 1);
+				if (NextPointerPte > EndingPte) {
+					break;
+				}
+				PointerPte = NextPointerPte;
+				continue;
+			}
+		}
+
+		if (PointerPte->Hw & PTE_VALID_MASK) {
+			PFN_NUMBER Pfn = PointerPte->Hw >> PAGE_SHIFT;
+			WriteZeroPte(PointerPte);
+			MiFlushTlbForPage((PVOID)GetVAddrMappedByPte(PointerPte));
+			MiInsertPageInFreeList(Pfn);
+			PXBOX_PFN Pf = GetPfnOfPt(PointerPte);
+			--Pf->PtPageFrame.PtesUsed;
+			if (Pf->PtPageFrame.PtesUsed == 0) {
+				// Page table is empty, free it and zero the PDE
+				PMMPTE PointerPde = GetPteAddress(PointerPte);
+				PFN_NUMBER PtPfn = GetPfnFromContiguous(PointerPde->Hw & ~PAGE_MASK);
+				WriteZeroPte(PointerPde);
+				MiFlushTlbForPage((PVOID)GetVAddrMappedByPte(PointerPde));
+				MiInsertPageInFreeList(PtPfn);
+				// Skip remaining PTEs in this now-freed page table
+				PMMPTE NextBoundary = (PMMPTE)GetVAddrMappedByPte(PointerPde + 1);
+				PointerPte = NextBoundary;
+				continue;
+			}
+		}
+
+		++PointerPte;
+	}
+
+	MiUnlock(OldIrql);
+
+	if (FreeType & MEM_RELEASE) {
+		MiVirtualMemoryBytesReserved -= AlignedSize;
+		DestructVAD(AlignedBase, AlignedSize);
+	}
+
+	*BaseAddress = (PVOID)AlignedBase;
+	*FreeSize = AlignedSize;
+
+	VadUnlock();
 
 	return STATUS_SUCCESS;
 }
