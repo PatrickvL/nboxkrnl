@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "..\kernel.hpp"
@@ -564,4 +565,52 @@ EXPORTNUM(181) NTSTATUS XBOXAPI MmQueryStatistics
 	MiUnlock(OldIrql);
 
 	return STATUS_SUCCESS;
+}
+
+
+EXPORTNUM(171) VOID XBOXAPI MmFreeContiguousMemory
+(
+	PVOID BaseAddress
+)
+{
+	// Stub: contiguous memory free requires tracking allocation sizes
+	// For now, just log a warning
+}
+
+EXPORTNUM(176) VOID XBOXAPI MmLockUnlockPhysicalPage
+(
+	ULONG PhysicalAddress,
+	BOOLEAN UnlockPage
+)
+{
+	// Stub: physical page locking is not needed in emulation
+}
+
+EXPORTNUM(178) VOID XBOXAPI MmPersistContiguousMemory
+(
+	PVOID BaseAddress,
+	ULONG NumberOfBytes,
+	BOOLEAN Persist
+)
+{
+	// Stub: persistence of contiguous memory regions is not needed in emulation
+}
+
+EXPORTNUM(179) ULONG XBOXAPI MmQueryAddressProtect
+(
+	PVOID VirtualAddress
+)
+{
+	// Return PAGE_READWRITE as default protection
+	return PAGE_READWRITE;
+}
+
+EXPORTNUM(182) VOID XBOXAPI MmSetAddressProtect
+(
+	PVOID BaseAddress,
+	ULONG NumberOfBytes,
+	ULONG NewProtect
+)
+{
+	// Stub: page protection changes are not enforced in emulation
 }

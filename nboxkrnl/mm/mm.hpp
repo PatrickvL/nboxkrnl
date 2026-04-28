@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -216,6 +217,36 @@ EXPORTNUM(180) DLLEXPORT SIZE_T XBOXAPI MmQueryAllocationSize
 EXPORTNUM(181) DLLEXPORT NTSTATUS XBOXAPI MmQueryStatistics
 (
 	PMM_STATISTICS MemoryStatistics
+);
+
+EXPORTNUM(171) DLLEXPORT VOID XBOXAPI MmFreeContiguousMemory
+(
+	PVOID BaseAddress
+);
+
+EXPORTNUM(176) DLLEXPORT VOID XBOXAPI MmLockUnlockPhysicalPage
+(
+	ULONG PhysicalAddress,
+	BOOLEAN UnlockPage
+);
+
+EXPORTNUM(178) DLLEXPORT VOID XBOXAPI MmPersistContiguousMemory
+(
+	PVOID BaseAddress,
+	ULONG NumberOfBytes,
+	BOOLEAN Persist
+);
+
+EXPORTNUM(179) DLLEXPORT ULONG XBOXAPI MmQueryAddressProtect
+(
+	PVOID VirtualAddress
+);
+
+EXPORTNUM(182) DLLEXPORT VOID XBOXAPI MmSetAddressProtect
+(
+	PVOID BaseAddress,
+	ULONG NumberOfBytes,
+	ULONG NewProtect
 );
 
 #ifdef __cplusplus
