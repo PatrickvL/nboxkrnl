@@ -12,6 +12,7 @@
 #include "mm.hpp"
 #include "nt.hpp"
 #include "ob.hpp"
+#include "phy.hpp"
 #include "ps.hpp"
 #include "rtl.hpp"
 #include "xc.hpp"
@@ -274,8 +275,8 @@ ULONG KernelThunkTable[379] =
 	(ULONG)VARIABLE(&ObSymbolicLinkObjectType),            // 0x00F9 (249)
 	(ULONG)FUNC(&ObfDereferenceObject),                    // 0x00FA (250)
 	(ULONG)FUNC(&ObfReferenceObject),                      // 0x00FB (251)
-	(ULONG)FUNC(nullptr), //(ULONG)FUNC(&PhyGetLinkState),                         // 0x00FC (252)
-	(ULONG)FUNC(nullptr), //(ULONG)FUNC(&PhyInitialize),                           // 0x00FD (253)
+	(ULONG)FUNC(&PhyGetLinkState),                         // 0x00FC (252)
+	(ULONG)FUNC(&PhyInitialize),                           // 0x00FD (253)
 	(ULONG)FUNC(&PsCreateSystemThread),                    // 0x00FE (254)
 	(ULONG)FUNC(&PsCreateSystemThreadEx),                  // 0x00FF (255)
 	(ULONG)FUNC(nullptr), //(ULONG)FUNC(&PsQueryStatistics),                       // 0x0100 (256)

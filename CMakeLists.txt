@@ -74,6 +74,7 @@ include_directories(
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/mm"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ob"
+ "${NBOXKRNL_ROOT_DIR}/nboxkrnl/phy"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ps"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/rtl"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/xc"
@@ -116,6 +117,7 @@ file (GLOB HEADERS
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/zw.hpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ob/ob.hpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ob/obp.hpp"
+ "${NBOXKRNL_ROOT_DIR}/nboxkrnl/phy/phy.hpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ps/ps.hpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ps/psp.hpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/rtl/exp_sup.hpp"
@@ -207,6 +209,7 @@ file (GLOB SOURCES
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/xc/rc4.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/xc/sha.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/xe/xe.cpp"
+ "${NBOXKRNL_ROOT_DIR}/nboxkrnl/phy/phy.cpp"
 
  "${NBOXKRNL_ROOT_DIR}/import/nanopdclib/functions/string/memcmp.c"
  "${NBOXKRNL_ROOT_DIR}/import/nanopdclib/functions/string/memcpy.c"
