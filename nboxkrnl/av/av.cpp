@@ -1,6 +1,7 @@
 /*
 * ergo720                Copyright (c) 2025
 * LukeUsher              Copyright (c) 2018
+* PatrickvL              Copyright (c) 2026
 */
 
 #include "ex.hpp"
@@ -207,4 +208,34 @@ EXPORTNUM(2) VOID XBOXAPI AvSendTVEncoderOption
 	default:
 		RIP_API_FMT("Option 0x%08X with Param 0x%08X not implemented!", Option, Param);
 	}
+}
+
+
+static PVOID AvpSavedDataAddress = nullptr;
+
+EXPORTNUM(1) PVOID XBOXAPI AvGetSavedDataAddress()
+{
+	return AvpSavedDataAddress;
+}
+
+EXPORTNUM(3) ULONG XBOXAPI AvSetDisplayMode
+(
+	PVOID RegisterBase,
+	ULONG Step,
+	ULONG Mode,
+	ULONG Format,
+	ULONG Pitch,
+	ULONG FrameBuffer
+)
+{
+	// Stub: display mode setup is handled by the host
+	return STATUS_SUCCESS;
+}
+
+EXPORTNUM(4) VOID XBOXAPI AvSetSavedDataAddress
+(
+	PVOID Address
+)
+{
+	AvpSavedDataAddress = Address;
 }
