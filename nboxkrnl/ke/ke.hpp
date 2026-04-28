@@ -672,6 +672,68 @@ EXPORTNUM(163) DLLEXPORT VOID FASTCALL KiUnlockDispatcherDatabase
 	KIRQL NewIrql
 );
 
+EXPORTNUM(97) DLLEXPORT BOOLEAN XBOXAPI KeCancelTimer
+(
+	PKTIMER Timer
+);
+
+EXPORTNUM(100) DLLEXPORT VOID XBOXAPI KeDisconnectInterrupt
+(
+	PKINTERRUPT Interrupt
+);
+
+EXPORTNUM(124) DLLEXPORT LONG XBOXAPI KeQueryBasePriorityThread
+(
+	PKTHREAD Thread
+);
+
+EXPORTNUM(137) DLLEXPORT BOOLEAN XBOXAPI KeRemoveQueueDpc
+(
+	PKDPC Dpc
+);
+
+EXPORTNUM(138) DLLEXPORT LONG XBOXAPI KeResetEvent
+(
+	PKEVENT Event
+);
+
+EXPORTNUM(139) DLLEXPORT NTSTATUS XBOXAPI KeRestoreFloatingPointState
+(
+	PVOID FloatSave
+);
+
+EXPORTNUM(142) DLLEXPORT NTSTATUS XBOXAPI KeSaveFloatingPointState
+(
+	PVOID FloatSave
+);
+
+EXPORTNUM(143) DLLEXPORT LONG XBOXAPI KeSetBasePriorityThread
+(
+	PKTHREAD Thread,
+	LONG Increment
+);
+
+typedef BOOLEAN (XBOXAPI *PKSYNCHRONIZE_ROUTINE)(PVOID SynchronizeContext);
+
+EXPORTNUM(153) DLLEXPORT BOOLEAN XBOXAPI KeSynchronizeExecution
+(
+	PKINTERRUPT Interrupt,
+	PKSYNCHRONIZE_ROUTINE SynchronizeRoutine,
+	PVOID SynchronizeContext
+);
+
+EXPORTNUM(158) DLLEXPORT NTSTATUS XBOXAPI KeWaitForMultipleObjects
+(
+	ULONG Count,
+	PVOID Object[],
+	WAIT_TYPE WaitType,
+	KWAIT_REASON WaitReason,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout,
+	PKWAIT_BLOCK WaitBlockArray
+);
+
 EXPORTNUM(321) DLLEXPORT extern XBOX_KEY_DATA XboxEEPROMKey;
 
 #ifdef __cplusplus

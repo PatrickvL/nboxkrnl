@@ -1,11 +1,16 @@
 /*
  * ergo720                Copyright (c) 2023
  * LukeUsher              Copyright (c) 2018
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "ki.hpp"
 #include "rtl.hpp"
 #include "ex.hpp"
+
+#ifndef MAXIMUM_WAIT_OBJECTS
+#define MAXIMUM_WAIT_OBJECTS 64
+#endif
 
 
 // Source: Cxbx-Reloaded
@@ -355,4 +360,185 @@ VOID KiUnwaitThread(PKTHREAD Thread, LONG_PTR WaitStatus, KPRIORITY Increment)
 	}
 
 	KiScheduleThread(Thread);
+}
+
+
+EXPORTNUM(158) NTSTATUS XBOXAPI KeWaitForMultipleObjects
+(
+	ULONG Count,
+	PVOID Object[],
+	WAIT_TYPE WaitType,
+	KWAIT_REASON WaitReason,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout,
+	PKWAIT_BLOCK WaitBlockArray
+)
+{
+	// For single object, delegate to KeWaitForSingleObject
+	if (Count == 1) {
+		return KeWaitForSingleObject(Object[0], WaitReason, WaitMode, Alertable, Timeout);
+	}
+
+	PKTHREAD Thread = KeGetCurrentThread();
+	if (Thread->WaitNext) {
+		Thread->WaitNext = FALSE;
+	}
+	else {
+		Thread->WaitIrql = KeRaiseIrqlToDpcLevel();
+	}
+
+	NTSTATUS Status;
+	KWAIT_BLOCK StackWaitBlocks[MAXIMUM_WAIT_OBJECTS];
+	PKWAIT_BLOCK WaitBlocks = WaitBlockArray ? WaitBlockArray : StackWaitBlocks;
+	LARGE_INTEGER DueTime, DummyTime;
+	PLARGE_INTEGER CapturedTimeout = Timeout;
+	BOOLEAN HasWaited = FALSE;
+
+	while (true) {
+		Thread->WaitStatus = STATUS_SUCCESS;
+		BOOLEAN AllSatisfied = TRUE;
+
+		// Check if objects are already signaled
+		for (ULONG i = 0; i < Count; i++) {
+			PKMUTANT Mutant = (PKMUTANT)Object[i];
+
+			if (Mutant->Header.Type == MutantObject) {
+				if ((Mutant->Header.SignalState > 0) || (Thread == Mutant->OwnerThread)) {
+					if (Mutant->Header.SignalState == MUTANT_LIMIT) {
+						KiUnlockDispatcherDatabase(Thread->WaitIrql);
+						ExRaiseStatus(STATUS_MUTANT_LIMIT_EXCEEDED);
+					}
+					if (WaitType == WaitAny) {
+						KiWaitSatisfyMutant(Mutant, Thread);
+						Status = (NTSTATUS)i;
+						goto Done;
+					}
+				}
+				else {
+					AllSatisfied = FALSE;
+				}
+			}
+			else if (Mutant->Header.SignalState > 0) {
+				if (WaitType == WaitAny) {
+					if ((Mutant->Header.Type & SYNCHRONIZATION_OBJECT_TYPE_MASK) == EventSynchronizationObject) {
+						Mutant->Header.SignalState = 0;
+					}
+					else if (Mutant->Header.Type == SemaphoreObject) {
+						Mutant->Header.SignalState -= 1;
+					}
+					Status = (NTSTATUS)i;
+					goto Done;
+				}
+			}
+			else {
+				AllSatisfied = FALSE;
+			}
+		}
+
+		if (AllSatisfied && (WaitType == WaitAll)) {
+			// All objects are signaled, satisfy them all
+			for (ULONG i = 0; i < Count; i++) {
+				PKMUTANT Mutant = (PKMUTANT)Object[i];
+				if (Mutant->Header.Type == MutantObject) {
+					KiWaitSatisfyMutant(Mutant, Thread);
+				}
+				else if ((Mutant->Header.Type & SYNCHRONIZATION_OBJECT_TYPE_MASK) == EventSynchronizationObject) {
+					Mutant->Header.SignalState = 0;
+				}
+				else if (Mutant->Header.Type == SemaphoreObject) {
+					Mutant->Header.SignalState -= 1;
+				}
+			}
+			Status = STATUS_SUCCESS;
+			goto Done;
+		}
+
+		// Setup wait blocks
+		for (ULONG i = 0; i < Count; i++) {
+			WaitBlocks[i].Object = Object[i];
+			WaitBlocks[i].WaitKey = (USHORT)i;
+			WaitBlocks[i].WaitType = WaitType;
+			WaitBlocks[i].Thread = Thread;
+			WaitBlocks[i].NextWaitBlock = &WaitBlocks[i + 1];
+		}
+
+		Thread->WaitBlockList = &WaitBlocks[0];
+
+		if (Alertable) {
+			RIP_API_MSG("Thread alerts are not supported");
+		}
+		else if ((WaitMode == UserMode) && Thread->ApcState.UserApcPending) {
+			Status = STATUS_USER_APC;
+			break;
+		}
+
+		if (Timeout) {
+			if (Timeout->QuadPart == 0) {
+				Status = STATUS_TIMEOUT;
+				break;
+			}
+
+			PKTIMER Timer = &Thread->Timer;
+			PKWAIT_BLOCK WaitTimer = &Thread->TimerWaitBlock;
+			WaitBlocks[Count - 1].NextWaitBlock = WaitTimer;
+			Timer->Header.WaitListHead.Flink = &WaitTimer->WaitListEntry;
+			Timer->Header.WaitListHead.Blink = &WaitTimer->WaitListEntry;
+			WaitTimer->NextWaitBlock = &WaitBlocks[0];
+			if (KiInsertTimer(Timer, *Timeout) == FALSE) {
+				Status = STATUS_TIMEOUT;
+				break;
+			}
+			DueTime.QuadPart = Timer->DueTime.QuadPart;
+		}
+		else {
+			WaitBlocks[Count - 1].NextWaitBlock = &WaitBlocks[0];
+		}
+
+		// Insert wait blocks into object wait lists
+		for (ULONG i = 0; i < Count; i++) {
+			PKMUTANT Mutant = (PKMUTANT)Object[i];
+			InsertTailList(&Mutant->Header.WaitListHead, &WaitBlocks[i].WaitListEntry);
+		}
+
+		if (Thread->Queue) {
+			RIP_API_MSG("Thread queues are not supported");
+		}
+
+		Thread->Alertable = Alertable;
+		Thread->WaitMode = WaitMode;
+		Thread->WaitReason = (UCHAR)WaitReason;
+		Thread->WaitTime = KeTickCount;
+		Thread->State = Waiting;
+		InsertTailList(&KiWaitInListHead, &Thread->WaitListEntry);
+
+		Status = KiSwapThread();
+		HasWaited = TRUE;
+
+		if (Status == STATUS_USER_APC) {
+			RIP_API_MSG("User APCs are not supported");
+		}
+
+		if (Status != STATUS_KERNEL_APC) {
+			return Status;
+		}
+
+		if (Timeout) {
+			Timeout = KiRecalculateTimerDueTime(CapturedTimeout, &DueTime, &DummyTime);
+		}
+
+		Thread->WaitIrql = KeRaiseIrqlToDpcLevel();
+	}
+
+Done:
+	if (HasWaited == FALSE) {
+		KiAdjustQuantumThread();
+	}
+
+	KiUnlockDispatcherDatabase(Thread->WaitIrql);
+	if (Status == STATUS_USER_APC) {
+		RIP_API_MSG("User APCs are not supported");
+	}
+
+	return Status;
 }

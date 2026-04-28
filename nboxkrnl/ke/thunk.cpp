@@ -180,7 +180,7 @@ ULONG KernelThunkTable[379] =
 	(ULONG)FUNC(&KeTestAlertThread),                       // 0x009B (155)
 	(ULONG)VARIABLE(&KeTickCount),                         // 0x009C (156)
 	(ULONG)VARIABLE(&KeTimeIncrement),                     // 0x009D (157)
-	(ULONG)FUNC(nullptr), //(ULONG)FUNC(&KeWaitForMultipleObjects),                // 0x009E (158)
+	(ULONG)FUNC(&KeWaitForMultipleObjects),                // 0x009E (158)
 	(ULONG)FUNC(&KeWaitForSingleObject),                   // 0x009F (159)
 	(ULONG)FUNC(&KfRaiseIrql),                             // 0x00A0 (160)
 	(ULONG)FUNC(&KfLowerIrql),                             // 0x00A1 (161)
