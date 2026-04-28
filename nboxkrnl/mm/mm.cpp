@@ -337,6 +337,22 @@ EXPORTNUM(166) PVOID XBOXAPI MmAllocateContiguousMemoryEx
 		return nullptr;
 	}
 
+	// Pre-remove the contiguous data pages from the free list so that
+	// subsequent page table allocations cannot steal pages from this range.
+	{
+		ULONG Pfn = CurrentPfn;
+		for (ULONG i = 0; i < (ULONG)(PteEnd - StartPte + 1); ++i, ++Pfn) {
+			PXBOX_PFN Pf = MiRemovePageFromFreeList(Pfn);
+			Pf->Busy.Busy = 1;
+			Pf->Busy.BusyType = Contiguous;
+			Pf->Busy.LockCount = 0;
+			++MiPagesByUsage[Contiguous];
+		}
+	}
+
+	// Now allocate page tables (if needed) and write PTEs.  The contiguous
+	// pages are already removed, so MiRemoveRetailPageFromFreeList will not
+	// return any page from the contiguous range.
 	Pte = StartPte;
 	ULONG PageTablePfn = CurrentPfn - 1; // skip the candidate contiguous range we found and grab the first free page(s) we find
 	while (Pte <= PteEnd) {
