@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -182,6 +183,8 @@ EXPORTNUM(18) DLLEXPORT VOID XBOXAPI ExInitializeReadWriteLock
 
 EXPORTNUM(22) DLLEXPORT extern OBJECT_TYPE ExMutantObjectType;
 
+EXPORTNUM(30) DLLEXPORT extern OBJECT_TYPE ExSemaphoreObjectType;
+
 EXPORTNUM(23) DLLEXPORT ULONG XBOXAPI ExQueryPoolBlockSize
 (
 	PVOID PoolBlock
@@ -206,9 +209,24 @@ EXPORTNUM(27) DLLEXPORT VOID XBOXAPI ExRaiseStatus
 	NTSTATUS Status
 );
 
+EXPORTNUM(25) DLLEXPORT NTSTATUS XBOXAPI ExReadWriteRefurbInfo
+(
+	PVOID Buffer,
+	ULONG Length,
+	BOOLEAN Write
+);
+
 EXPORTNUM(28) DLLEXPORT VOID XBOXAPI ExReleaseReadWriteLock
 (
 	PERWLOCK ReadWriteLock
+);
+
+EXPORTNUM(29) DLLEXPORT NTSTATUS XBOXAPI ExSaveNonVolatileSetting
+(
+	DWORD ValueIndex,
+	DWORD Type,
+	PVOID Value,
+	SIZE_T ValueLength
 );
 
 EXPORTNUM(51) DLLEXPORT LONG FASTCALL InterlockedCompareExchange

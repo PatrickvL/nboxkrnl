@@ -180,3 +180,34 @@ EXPORTNUM(54) LONG FASTCALL InterlockedExchange
 	}
 	// clang-format on
 }
+
+
+EXPORTNUM(25) NTSTATUS XBOXAPI ExReadWriteRefurbInfo
+(
+	PVOID Buffer,
+	ULONG Length,
+	BOOLEAN Write
+)
+{
+	if (Write) {
+		// Stub: writing refurb info is not supported in emulation
+		return STATUS_SUCCESS;
+	}
+	else {
+		// Return zeroed refurb info
+		RtlZeroMemory(Buffer, Length);
+		return STATUS_SUCCESS;
+	}
+}
+
+EXPORTNUM(29) NTSTATUS XBOXAPI ExSaveNonVolatileSetting
+(
+	DWORD ValueIndex,
+	DWORD Type,
+	PVOID Value,
+	SIZE_T ValueLength
+)
+{
+	// Stub: saving non-volatile settings is not persistent in emulation
+	return STATUS_SUCCESS;
+}
