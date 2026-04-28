@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2024
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "cdrom.hpp"
@@ -565,6 +566,11 @@ static NTSTATUS XBOXAPI XdvdfsIrpDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP
 		Status = STATUS_SUCCESS;
 	}
 	break;
+
+	case IOCTL_CDROM_CHECK_VERIFY:
+		// The disc is always present in the emulated drive
+		Status = STATUS_SUCCESS;
+		break;
 
 	default:
 		RIP_API_FMT("Ripped on unimplemented DVD IOCTL 0x%X", IrpStackPointer->Parameters.DeviceIoControl.IoControlCode);

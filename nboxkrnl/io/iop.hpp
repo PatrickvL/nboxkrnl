@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -92,6 +93,7 @@
 #define IOCTL_DISK_GET_PARTITION_INFO   0x00074004
 #define IOCTL_DISK_VERIFY               0x00070014
 #define IOCTL_IDE_PASS_THROUGH          0x0004D028
+#define IOCTL_CDROM_CHECK_VERIFY        0x00024000
 #define IOCTL_SCSI_PASS_THROUGH_DIRECT  0x0004D014
 
 using PFILE_SEGMENT_ELEMENT = PVOID;
