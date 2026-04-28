@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "ex.hpp"
@@ -10,6 +11,9 @@
 #include "cdrom\cdrom.hpp"
 #include "hdd\hdd.hpp"
 #include <string.h>
+
+// IDE channel object stub
+EXPORTNUM(357) PVOID IdexChannelObject = nullptr;
 
 
 EXPORTNUM(70) OBJECT_TYPE IoDeviceObjectType = {
@@ -892,4 +896,172 @@ PIRP IoAllocateIrpNoFail(CCHAR StackSize)
 		LARGE_INTEGER Timeout{ .QuadPart = -50 * 10000 };
 		KeDelayExecutionThread(KernelMode, FALSE, &Timeout);
 	}
+}
+
+
+EXPORTNUM(69) NTSTATUS XBOXAPI IoDeleteSymbolicLink
+(
+	PSTRING SymbolicLinkName
+)
+{
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	InitializeObjectAttributes(&ObjectAttributes, SymbolicLinkName, OBJ_CASE_INSENSITIVE, nullptr);
+
+	HANDLE LinkHandle;
+	NTSTATUS Status = NtOpenSymbolicLinkObject(&LinkHandle, &ObjectAttributes);
+
+	if (NT_SUCCESS(Status)) {
+		PVOID LinkObject;
+		Status = ObReferenceObjectByHandle(LinkHandle, &ObSymbolicLinkObjectType, &LinkObject);
+		if (NT_SUCCESS(Status)) {
+			ObMakeTemporaryObject(LinkObject);
+			ObfDereferenceObject(LinkObject);
+		}
+		NtClose(LinkHandle);
+	}
+
+	return Status;
+}
+
+EXPORTNUM(91) NTSTATUS XBOXAPI IoDismountVolumeByName
+(
+	PSTRING VolumeName
+)
+{
+	// Stub: volume dismounting is not supported in emulation
+	return STATUS_SUCCESS;
+}
+
+EXPORTNUM(84) NTSTATUS XBOXAPI IoSynchronousDeviceIoControlRequest
+(
+	ULONG IoControlCode,
+	PDEVICE_OBJECT DeviceObject,
+	PVOID InputBuffer,
+	ULONG InputBufferLength,
+	PVOID OutputBuffer,
+	ULONG OutputBufferLength,
+	PULONG ReturnedOutputBufferLength,
+	BOOLEAN InternalDeviceIoControl
+)
+{
+	KEVENT Event;
+	KeInitializeEvent(&Event, NotificationEvent, FALSE);
+
+	IO_STATUS_BLOCK IoStatusBlock;
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return STATUS_INSUFFICIENT_RESOURCES;
+	}
+
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->UserIosb = &IoStatusBlock;
+	Irp->UserEvent = &Event;
+	Irp->Flags = IRP_SYNCHRONOUS_API;
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = InternalDeviceIoControl ? IRP_MJ_INTERNAL_DEVICE_CONTROL : IRP_MJ_DEVICE_CONTROL;
+	IrpStackPointer->Parameters.DeviceIoControl.OutputBufferLength = OutputBufferLength;
+	IrpStackPointer->Parameters.DeviceIoControl.InputBufferLength = InputBufferLength;
+	IrpStackPointer->Parameters.DeviceIoControl.IoControlCode = IoControlCode;
+
+	// Setup based on method - Xbox IRP doesn't have AssociatedIrp.SystemBuffer
+	// Pass input via DeviceIoControl.InputBuffer, output via UserBuffer
+	IrpStackPointer->Parameters.DeviceIoControl.InputBuffer = InputBuffer;
+	Irp->UserBuffer = OutputBuffer;
+
+	NTSTATUS Status = IofCallDriver(DeviceObject, Irp);
+	if (Status == STATUS_PENDING) {
+		KeWaitForSingleObject(&Event, Executive, KernelMode, FALSE, nullptr);
+		Status = IoStatusBlock.Status;
+	}
+
+	if (ReturnedOutputBufferLength) {
+		*ReturnedOutputBufferLength = (ULONG)IoStatusBlock.Information;
+	}
+
+	return Status;
+}
+
+EXPORTNUM(62) PIRP XBOXAPI IoBuildSynchronousFsdRequest
+(
+	ULONG MajorFunction,
+	PDEVICE_OBJECT DeviceObject,
+	PVOID Buffer,
+	ULONG Length,
+	PLARGE_INTEGER StartingOffset,
+	PKEVENT Event,
+	PIO_STATUS_BLOCK IoStatusBlock
+)
+{
+	PIRP Irp = IoAllocateIrp(DeviceObject->StackSize);
+	if (!Irp) {
+		return nullptr;
+	}
+
+	Irp->Tail.Overlay.Thread = (PETHREAD)KeGetCurrentThread();
+	Irp->UserIosb = IoStatusBlock;
+	Irp->UserEvent = Event;
+	Irp->Flags = IRP_SYNCHRONOUS_API;
+
+	PIO_STACK_LOCATION IrpStackPointer = IoGetNextIrpStackLocation(Irp);
+	IrpStackPointer->MajorFunction = (UCHAR)MajorFunction;
+
+	if (MajorFunction == IRP_MJ_READ || MajorFunction == IRP_MJ_WRITE) {
+		Irp->UserBuffer = Buffer;
+		if (MajorFunction == IRP_MJ_READ) {
+			IrpStackPointer->Parameters.Read.Length = Length;
+			if (StartingOffset) {
+				IrpStackPointer->Parameters.Read.ByteOffset = *StartingOffset;
+			}
+		}
+		else {
+			IrpStackPointer->Parameters.Write.Length = Length;
+			if (StartingOffset) {
+				IrpStackPointer->Parameters.Write.ByteOffset = *StartingOffset;
+			}
+		}
+	}
+
+	return Irp;
+}
+
+EXPORTNUM(85) NTSTATUS XBOXAPI IoSynchronousFsdRequest
+(
+	ULONG MajorFunction,
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp
+)
+{
+	NTSTATUS Status = IofCallDriver(DeviceObject, Irp);
+	if (Status == STATUS_PENDING) {
+		KeWaitForSingleObject(Irp->UserEvent, Executive, KernelMode, FALSE, nullptr);
+		Status = Irp->UserIosb->Status;
+	}
+	return Status;
+}
+
+EXPORTNUM(81) VOID XBOXAPI IoStartNextPacket
+(
+	PDEVICE_OBJECT DeviceObject
+)
+{
+	// Stub: packet-based I/O is not used in emulation
+}
+
+EXPORTNUM(83) VOID XBOXAPI IoStartPacket
+(
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp
+)
+{
+	// Stub: packet-based I/O is not used in emulation
+}
+
+EXPORTNUM(359) BOOLEAN XBOXAPI IoMarkIrpMustComplete
+(
+	PIRP Irp
+)
+{
+	// Stub
+	return TRUE;
 }

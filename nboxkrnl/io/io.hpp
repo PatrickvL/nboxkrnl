@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -213,6 +214,64 @@ EXPORTNUM(87) DLLEXPORT VOID FASTCALL IofCompleteRequest
 	PIRP Irp,
 	CCHAR PriorityBoost
 );
+
+EXPORTNUM(62) DLLEXPORT PIRP XBOXAPI IoBuildSynchronousFsdRequest
+(
+	ULONG MajorFunction,
+	PDEVICE_OBJECT DeviceObject,
+	PVOID Buffer,
+	ULONG Length,
+	PLARGE_INTEGER StartingOffset,
+	PKEVENT Event,
+	PIO_STATUS_BLOCK IoStatusBlock
+);
+
+EXPORTNUM(69) DLLEXPORT NTSTATUS XBOXAPI IoDeleteSymbolicLink
+(
+	PSTRING SymbolicLinkName
+);
+
+EXPORTNUM(81) DLLEXPORT VOID XBOXAPI IoStartNextPacket
+(
+	PDEVICE_OBJECT DeviceObject
+);
+
+EXPORTNUM(83) DLLEXPORT VOID XBOXAPI IoStartPacket
+(
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp
+);
+
+EXPORTNUM(84) DLLEXPORT NTSTATUS XBOXAPI IoSynchronousDeviceIoControlRequest
+(
+	ULONG IoControlCode,
+	PDEVICE_OBJECT DeviceObject,
+	PVOID InputBuffer,
+	ULONG InputBufferLength,
+	PVOID OutputBuffer,
+	ULONG OutputBufferLength,
+	PULONG ReturnedOutputBufferLength,
+	BOOLEAN InternalDeviceIoControl
+);
+
+EXPORTNUM(85) DLLEXPORT NTSTATUS XBOXAPI IoSynchronousFsdRequest
+(
+	ULONG MajorFunction,
+	PDEVICE_OBJECT DeviceObject,
+	PIRP Irp
+);
+
+EXPORTNUM(91) DLLEXPORT NTSTATUS XBOXAPI IoDismountVolumeByName
+(
+	PSTRING VolumeName
+);
+
+EXPORTNUM(359) DLLEXPORT BOOLEAN XBOXAPI IoMarkIrpMustComplete
+(
+	PIRP Irp
+);
+
+extern PVOID IdexChannelObject;
 
 #ifdef __cplusplus
 }

@@ -52,9 +52,14 @@
 
 #define SL_PENDING_RETURNED              0x01
 #define SL_MUST_COMPLETE                 0x02
+#define SL_RESTART_SCAN                  0x01
 #define SL_INVOKE_ON_CANCEL              0x20
 #define SL_INVOKE_ON_SUCCESS             0x40
 #define SL_INVOKE_ON_ERROR               0x80
+
+#define IRP_MN_QUERY_DIRECTORY           0x01
+
+#define METHOD_BUFFERED                  0
 
 #define IRP_NOCACHE                     0x00000001
 #define IRP_MOUNT_COMPLETION            0x00000002
