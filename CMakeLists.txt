@@ -186,6 +186,8 @@ file (GLOB SOURCES
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/file.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/memory.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/mutant.cpp"
+ "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/event.cpp"
+ "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/semaphore.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/objects.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/nt/services.cpp"
  "${NBOXKRNL_ROOT_DIR}/nboxkrnl/ob/ob.cpp"

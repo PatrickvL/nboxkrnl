@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -166,6 +167,140 @@ EXPORTNUM(236) DLLEXPORT NTSTATUS XBOXAPI NtWriteFile
 	ULONG Length,
 	PLARGE_INTEGER ByteOffset
 );
+
+EXPORTNUM(186) DLLEXPORT NTSTATUS XBOXAPI NtClearEvent
+(
+	HANDLE EventHandle
+);
+
+EXPORTNUM(189) DLLEXPORT NTSTATUS XBOXAPI NtCreateEvent
+(
+	PHANDLE EventHandle,
+	POBJECT_ATTRIBUTES ObjectAttributes,
+	EVENT_TYPE EventType,
+	BOOLEAN InitialState
+);
+
+EXPORTNUM(193) DLLEXPORT NTSTATUS XBOXAPI NtCreateSemaphore
+(
+	PHANDLE SemaphoreHandle,
+	POBJECT_ATTRIBUTES ObjectAttributes,
+	LONG InitialCount,
+	LONG MaximumCount
+);
+
+EXPORTNUM(195) DLLEXPORT NTSTATUS XBOXAPI NtDeleteFile
+(
+	POBJECT_ATTRIBUTES ObjectAttributes
+);
+
+EXPORTNUM(198) DLLEXPORT NTSTATUS XBOXAPI NtFlushBuffersFile
+(
+	HANDLE FileHandle,
+	PIO_STATUS_BLOCK IoStatusBlock
+);
+
+EXPORTNUM(200) DLLEXPORT NTSTATUS XBOXAPI NtFsControlFile
+(
+	HANDLE FileHandle,
+	HANDLE Event,
+	PIO_APC_ROUTINE ApcRoutine,
+	PVOID ApcContext,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	ULONG FsControlCode,
+	PVOID InputBuffer,
+	ULONG InputBufferLength,
+	PVOID OutputBuffer,
+	ULONG OutputBufferLength
+);
+
+EXPORTNUM(207) DLLEXPORT NTSTATUS XBOXAPI NtQueryDirectoryFile
+(
+	HANDLE FileHandle,
+	HANDLE Event,
+	PIO_APC_ROUTINE ApcRoutine,
+	PVOID ApcContext,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	PVOID FileInformation,
+	ULONG Length,
+	FILE_INFORMATION_CLASS FileInformationClass,
+	PSTRING FileName,
+	BOOLEAN RestartScan
+);
+
+EXPORTNUM(210) DLLEXPORT NTSTATUS XBOXAPI NtQueryFullAttributesFile
+(
+	POBJECT_ATTRIBUTES ObjectAttributes,
+	PFILE_NETWORK_OPEN_INFORMATION FileInformation
+);
+
+EXPORTNUM(215) DLLEXPORT NTSTATUS XBOXAPI NtQuerySymbolicLinkObject
+(
+	HANDLE LinkHandle,
+	PSTRING LinkTarget,
+	PULONG ReturnedLength
+);
+
+EXPORTNUM(217) DLLEXPORT NTSTATUS XBOXAPI NtQueryVirtualMemory
+(
+	PVOID BaseAddress,
+	PVOID MemoryInformation
+);
+
+EXPORTNUM(222) DLLEXPORT NTSTATUS XBOXAPI NtReleaseSemaphore
+(
+	HANDLE SemaphoreHandle,
+	LONG ReleaseCount,
+	PLONG PreviousCount
+);
+
+EXPORTNUM(224) DLLEXPORT NTSTATUS XBOXAPI NtResumeThread
+(
+	HANDLE ThreadHandle,
+	PULONG PreviousSuspendCount
+);
+
+EXPORTNUM(225) DLLEXPORT NTSTATUS XBOXAPI NtSetEvent
+(
+	HANDLE EventHandle,
+	PLONG PreviousState
+);
+
+EXPORTNUM(226) DLLEXPORT NTSTATUS XBOXAPI NtSetInformationFile
+(
+	HANDLE FileHandle,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	PVOID FileInformation,
+	ULONG Length,
+	FILE_INFORMATION_CLASS FileInformationClass
+);
+
+EXPORTNUM(228) DLLEXPORT NTSTATUS XBOXAPI NtSetSystemTime
+(
+	PLARGE_INTEGER SystemTime,
+	PLARGE_INTEGER PreviousTime
+);
+
+EXPORTNUM(230) DLLEXPORT NTSTATUS XBOXAPI NtSignalAndWaitForSingleObjectEx
+(
+	HANDLE SignalHandle,
+	HANDLE WaitHandle,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout
+);
+
+EXPORTNUM(235) DLLEXPORT NTSTATUS XBOXAPI NtWaitForMultipleObjectsEx
+(
+	ULONG Count,
+	HANDLE Handles[],
+	WAIT_TYPE WaitType,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout
+);
+
+EXPORTNUM(238) DLLEXPORT NTSTATUS XBOXAPI NtYieldExecution();
 
 #ifdef __cplusplus
 }
