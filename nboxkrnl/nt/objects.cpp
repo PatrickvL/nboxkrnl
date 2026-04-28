@@ -1,11 +1,18 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "nt.hpp"
 #include "obp.hpp"
 #include "rtl.hpp"
+#include "ex.hpp"
+#include "ps.hpp"
 #include <string.h>
+
+#ifndef MAXIMUM_WAIT_OBJECTS
+#define MAXIMUM_WAIT_OBJECTS 64
+#endif
 
 
 EXPORTNUM(187) NTSTATUS XBOXAPI NtClose
@@ -115,5 +122,110 @@ EXPORTNUM(234) NTSTATUS XBOXAPI NtWaitForSingleObjectEx
 		ObfDereferenceObject(Object);
 	}
 
+	return Status;
+}
+
+
+EXPORTNUM(235) NTSTATUS XBOXAPI NtWaitForMultipleObjectsEx
+(
+	ULONG Count,
+	HANDLE Handles[],
+	WAIT_TYPE WaitType,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout
+)
+{
+	PVOID Objects[MAXIMUM_WAIT_OBJECTS];
+	PVOID WaitObjects[MAXIMUM_WAIT_OBJECTS];
+
+	if ((Count == 0) || (Count > MAXIMUM_WAIT_OBJECTS)) {
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	// Reference all objects
+	for (ULONG i = 0; i < Count; i++) {
+		NTSTATUS Status = ObReferenceObjectByHandle(Handles[i], nullptr, &Objects[i]);
+		if (!NT_SUCCESS(Status)) {
+			for (ULONG j = 0; j < i; j++) {
+				ObfDereferenceObject(Objects[j]);
+			}
+			return Status;
+		}
+
+		POBJECT_HEADER Obj = GetObjHeader(Objects[i]);
+		PVOID ObjectToWaitOn = Obj->Type->DefaultObject;
+		if ((LONG_PTR)ObjectToWaitOn >= 0) {
+			ObjectToWaitOn = (PCHAR)Objects[i] + (ULONG_PTR)ObjectToWaitOn;
+		}
+		WaitObjects[i] = ObjectToWaitOn;
+	}
+
+	NTSTATUS Status;
+	__try {
+		Status = KeWaitForMultipleObjects(Count, WaitObjects, WaitType, UserRequest, WaitMode, Alertable, Timeout, nullptr);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		Status = GetExceptionCode();
+	}
+
+	for (ULONG i = 0; i < Count; i++) {
+		ObfDereferenceObject(Objects[i]);
+	}
+
+	return Status;
+}
+
+EXPORTNUM(230) NTSTATUS XBOXAPI NtSignalAndWaitForSingleObjectEx
+(
+	HANDLE SignalHandle,
+	HANDLE WaitHandle,
+	KPROCESSOR_MODE WaitMode,
+	BOOLEAN Alertable,
+	PLARGE_INTEGER Timeout
+)
+{
+	PVOID SignalObject;
+	NTSTATUS Status = ObReferenceObjectByHandle(SignalHandle, nullptr, &SignalObject);
+	if (!NT_SUCCESS(Status)) {
+		return Status;
+	}
+
+	PVOID WaitObject;
+	Status = ObReferenceObjectByHandle(WaitHandle, nullptr, &WaitObject);
+	if (!NT_SUCCESS(Status)) {
+		ObfDereferenceObject(SignalObject);
+		return Status;
+	}
+
+	POBJECT_HEADER SignalObjHeader = GetObjHeader(SignalObject);
+	POBJECT_HEADER WaitObjHeader = GetObjHeader(WaitObject);
+
+	PVOID ObjectToWaitOn = WaitObjHeader->Type->DefaultObject;
+	if ((LONG_PTR)ObjectToWaitOn >= 0) {
+		ObjectToWaitOn = (PCHAR)WaitObject + (ULONG_PTR)ObjectToWaitOn;
+	}
+
+	// Signal the signal object
+	DISPATCHER_HEADER *SignalHeader = (DISPATCHER_HEADER *)((PCHAR)SignalObject + (ULONG_PTR)SignalObjHeader->Type->DefaultObject);
+	if (SignalObjHeader->Type == &ExEventObjectType) {
+		KeSetEvent((PKEVENT)SignalHeader, PRIORITY_BOOST_EVENT, TRUE);
+	}
+	else if (SignalObjHeader->Type == &ExMutantObjectType) {
+		KeReleaseMutant((PKMUTANT)SignalHeader, PRIORITY_BOOST_MUTANT, FALSE, TRUE);
+	}
+	else {
+		KeReleaseSemaphore((PKSEMAPHORE)SignalHeader, PRIORITY_BOOST_SEMAPHORE, 1, TRUE);
+	}
+
+	__try {
+		Status = KeWaitForSingleObject(ObjectToWaitOn, UserRequest, WaitMode, Alertable, Timeout);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		Status = GetExceptionCode();
+	}
+
+	ObfDereferenceObject(WaitObject);
+	ObfDereferenceObject(SignalObject);
 	return Status;
 }

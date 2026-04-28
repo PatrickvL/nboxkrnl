@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -71,6 +72,7 @@
 #define STATUS_IO_DEVICE_ERROR                  ((NTSTATUS)0xC0000185L)
 #define STATUS_MUTANT_LIMIT_EXCEEDED            ((NTSTATUS)0xC0000191L)
 #define STATUS_VOLUME_DISMOUNTED                ((NTSTATUS)0xC000026EL)
+#define STATUS_NO_YIELD_PERFORMED               ((NTSTATUS)0x40000024L)
 
 #define NT_SUCCESS(Status)                      ((NTSTATUS)(Status) >= 0)
 #define NT_WARNING(Status)                      ((ULONG)(Status) >> 30 == 2)
