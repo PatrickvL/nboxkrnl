@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once

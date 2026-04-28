@@ -1,6 +1,7 @@
 /*
  * ergo720                Copyright (c) 2023
  * LukeUsher              Copyright (c) 2018
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "ke.hpp"
@@ -56,5 +57,18 @@ EXPORTNUM(145) LONG XBOXAPI KeSetEvent
 		KiUnlockDispatcherDatabase(OldIrql);
 	}
 
+	return OldState;
+}
+
+
+EXPORTNUM(138) LONG XBOXAPI KeResetEvent
+(
+	PKEVENT Event
+)
+{
+	KIRQL OldIrql = KeRaiseIrqlToDpcLevel();
+	LONG OldState = Event->Header.SignalState;
+	Event->Header.SignalState = 0;
+	KiUnlockDispatcherDatabase(OldIrql);
 	return OldState;
 }

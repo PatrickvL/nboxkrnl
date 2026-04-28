@@ -1,6 +1,7 @@
 /*
  * ergo720                Copyright (c) 2022
  * RadWolfie              Copyright (c) 2022
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "ke.hpp"
@@ -493,4 +494,39 @@ EXPORTNUM(155) BOOLEAN XBOXAPI KeTestAlertThread
 	RIP_UNIMPLEMENTED();
 
 	return FALSE;
+}
+
+
+EXPORTNUM(124) LONG XBOXAPI KeQueryBasePriorityThread
+(
+	PKTHREAD Thread
+)
+{
+	return Thread->BasePriority - Thread->ApcState.Process->BasePriority;
+}
+
+EXPORTNUM(143) LONG XBOXAPI KeSetBasePriorityThread
+(
+	PKTHREAD Thread,
+	LONG Increment
+)
+{
+	KIRQL OldIrql = KeRaiseIrqlToDpcLevel();
+
+	LONG OldIncrement = Thread->BasePriority - Thread->ApcState.Process->BasePriority;
+	LONG NewPriority = Thread->ApcState.Process->BasePriority + Increment;
+
+	// Clamp to valid range
+	if (NewPriority > HIGH_PRIORITY) {
+		NewPriority = HIGH_PRIORITY;
+	}
+	if (NewPriority < LOW_PRIORITY) {
+		NewPriority = LOW_PRIORITY;
+	}
+
+	Thread->BasePriority = (SCHAR)NewPriority;
+	KiSetPriorityThread(Thread, NewPriority);
+
+	KiUnlockDispatcherDatabase(OldIrql);
+	return OldIncrement;
 }

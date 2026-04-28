@@ -320,3 +320,20 @@ VOID XBOXAPI KiTimerExpiration(PKDPC Dpc, PVOID DeferredContext, PVOID SystemArg
 	// TODO
 	RIP_UNIMPLEMENTED();
 }
+
+
+EXPORTNUM(97) BOOLEAN XBOXAPI KeCancelTimer
+(
+	PKTIMER Timer
+)
+{
+	KIRQL OldIrql = KeRaiseIrqlToDpcLevel();
+
+	BOOLEAN Inserted = Timer->Header.Inserted;
+	if (Inserted) {
+		KiRemoveTimer(Timer);
+	}
+
+	KiUnlockDispatcherDatabase(OldIrql);
+	return Inserted;
+}

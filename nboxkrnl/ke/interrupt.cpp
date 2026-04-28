@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2024
+ * PatrickvL              Copyright (c) 2026
  */
 
 #include "ki.hpp"
@@ -94,4 +95,26 @@ EXPORTNUM(109) VOID XBOXAPI KeInitializeInterrupt
 	PULONG PatchedHalpInterruptCommonOffset = (PULONG)&InterruptPatchedCode[0x37];
 	assert(*PatchedHalpInterruptCommonOffset == 0);
 	*PatchedHalpInterruptCommonOffset = (ULONG)&HalpInterruptCommon;
+}
+
+
+EXPORTNUM(100) VOID XBOXAPI KeDisconnectInterrupt
+(
+	PKINTERRUPT Interrupt
+)
+{
+	Interrupt->Connected = FALSE;
+}
+
+EXPORTNUM(153) BOOLEAN XBOXAPI KeSynchronizeExecution
+(
+	PKINTERRUPT Interrupt,
+	PKSYNCHRONIZE_ROUTINE SynchronizeRoutine,
+	PVOID SynchronizeContext
+)
+{
+	KIRQL OldIrql = KfRaiseIrql((KIRQL)Interrupt->Irql);
+	BOOLEAN Result = SynchronizeRoutine(SynchronizeContext);
+	KfLowerIrql(OldIrql);
+	return Result;
 }

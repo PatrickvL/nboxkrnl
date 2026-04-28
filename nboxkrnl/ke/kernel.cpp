@@ -354,3 +354,21 @@ PLIST_ENTRY RemoveHeadList(PLIST_ENTRY pListHead)
 	RemoveEntryList(pList);
 	return pList;
 }
+
+
+EXPORTNUM(142) NTSTATUS XBOXAPI KeSaveFloatingPointState
+(
+	PVOID FloatSave
+)
+{
+	// Xbox only has a single processor; FP state is always available
+	return STATUS_SUCCESS;
+}
+
+EXPORTNUM(139) NTSTATUS XBOXAPI KeRestoreFloatingPointState
+(
+	PVOID FloatSave
+)
+{
+	return STATUS_SUCCESS;
+}

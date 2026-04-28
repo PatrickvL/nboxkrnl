@@ -72,3 +72,21 @@ VOID XBOXAPI KiExecuteDpcQueue()
 
 	KiPcr.PrcbData.DpcInterruptRequested = FALSE;
 }
+
+
+EXPORTNUM(137) BOOLEAN XBOXAPI KeRemoveQueueDpc
+(
+	PKDPC Dpc
+)
+{
+	KIRQL OldIrql = KfRaiseIrql(HIGH_LEVEL);
+
+	BOOLEAN Inserted = Dpc->Inserted;
+	if (Inserted) {
+		Dpc->Inserted = FALSE;
+		RemoveEntryList(&Dpc->DpcListEntry);
+	}
+
+	KfLowerIrql(OldIrql);
+	return Inserted;
+}
