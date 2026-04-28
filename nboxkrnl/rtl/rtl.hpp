@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2023
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -280,6 +281,23 @@ EXPORTNUM(320) DLLEXPORT VOID XBOXAPI RtlZeroMemory
 (
 	PVOID Destination,
 	SIZE_T Length
+);
+
+EXPORTNUM(286) DLLEXPORT VOID XBOXAPI RtlFreeAnsiString
+(
+	PSTRING AnsiString
+);
+
+EXPORTNUM(308) DLLEXPORT NTSTATUS XBOXAPI RtlUnicodeStringToAnsiString
+(
+	PSTRING DestinationString,
+	PUNICODE_STRING SourceString,
+	BOOLEAN AllocateDestinationString
+);
+
+EXPORTNUM(313) DLLEXPORT WCHAR XBOXAPI RtlUpcaseUnicodeChar
+(
+	WCHAR SourceCharacter
 );
 
 [[noreturn]] EXPORTNUM(352) DLLEXPORT VOID XBOXAPI RtlRip

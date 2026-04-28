@@ -152,3 +152,54 @@ EXPORTNUM(299) NTSTATUS XBOXAPI RtlMultiByteToUnicodeN
 
 	return STATUS_SUCCESS;
 }
+
+
+EXPORTNUM(308) NTSTATUS XBOXAPI RtlUnicodeStringToAnsiString
+(
+	PSTRING DestinationString,
+	PUNICODE_STRING SourceString,
+	BOOLEAN AllocateDestinationString
+)
+{
+	ULONG AnsiLength = (SourceString->Length / sizeof(WCHAR)) + sizeof(ANSI_NULL);
+
+	if (AnsiLength > 0xFFFF) {
+		return STATUS_INVALID_PARAMETER_2;
+	}
+
+	DestinationString->Length = (USHORT)(AnsiLength - sizeof(ANSI_NULL));
+	if (AllocateDestinationString) {
+		DestinationString->MaximumLength = (USHORT)AnsiLength;
+		DestinationString->Buffer = (PCHAR)ExAllocatePoolWithTag(AnsiLength, 'grtS');
+		if (!DestinationString->Buffer) {
+			return STATUS_NO_MEMORY;
+		}
+	}
+	else {
+		if (AnsiLength > DestinationString->MaximumLength) {
+			return STATUS_BUFFER_OVERFLOW;
+		}
+	}
+
+	// Simple Unicode to ANSI: truncate each WCHAR to CHAR
+	ULONG numChars = DestinationString->Length;
+	PWSTR src = SourceString->Buffer;
+	PCHAR dst = DestinationString->Buffer;
+	for (ULONG i = 0; i < numChars; i++) {
+		dst[i] = (CHAR)src[i];
+	}
+	dst[numChars] = '\0';
+
+	return STATUS_SUCCESS;
+}
+
+EXPORTNUM(313) WCHAR XBOXAPI RtlUpcaseUnicodeChar
+(
+	WCHAR SourceCharacter
+)
+{
+	if (SourceCharacter >= L'a' && SourceCharacter <= L'z') {
+		return SourceCharacter - (L'a' - L'A');
+	}
+	return SourceCharacter;
+}

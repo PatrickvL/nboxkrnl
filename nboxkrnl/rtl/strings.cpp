@@ -3,6 +3,7 @@
  */
 
 #include "rtl.hpp"
+#include "ex.hpp"
 #include <string.h>
 
 
@@ -44,4 +45,18 @@ EXPORTNUM(289) VOID XBOXAPI RtlInitAnsiString
 	else {
 		DestinationString->Length = DestinationString->MaximumLength = 0;
 	}
+}
+
+
+EXPORTNUM(286) VOID XBOXAPI RtlFreeAnsiString
+(
+	PSTRING AnsiString
+)
+{
+	if (AnsiString->Buffer) {
+		ExFreePool(AnsiString->Buffer);
+		AnsiString->Buffer = nullptr;
+	}
+	AnsiString->Length = 0;
+	AnsiString->MaximumLength = 0;
 }
