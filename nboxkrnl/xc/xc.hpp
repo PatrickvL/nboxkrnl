@@ -1,5 +1,6 @@
 /*
  * ergo720                Copyright (c) 2018
+ * PatrickvL              Copyright (c) 2026
  */
 
 #pragma once
@@ -82,6 +83,71 @@ EXPORTNUM(351) DLLEXPORT VOID XBOXAPI XcUpdateCrypto
 (
 	PCRYPTO_VECTOR pNewVector,
 	PCRYPTO_VECTOR pROMVector
+);
+
+EXPORTNUM(338) DLLEXPORT VOID XBOXAPI XcRC4Key
+(
+	PVOID KeyStruct,
+	ULONG KeyLength,
+	PVOID KeyMaterial
+);
+
+EXPORTNUM(339) DLLEXPORT VOID XBOXAPI XcRC4Crypt
+(
+	PVOID KeyStruct,
+	ULONG DataLength,
+	PVOID Data
+);
+
+EXPORTNUM(340) DLLEXPORT VOID XBOXAPI XcHMAC
+(
+	PVOID KeyMaterial,
+	ULONG KeyMaterialLength,
+	PVOID Data1,
+	ULONG Data1Length,
+	PVOID Data2,
+	ULONG Data2Length,
+	PVOID Digest
+);
+
+EXPORTNUM(344) DLLEXPORT BOOLEAN XBOXAPI XcVerifyPKCS1Signature
+(
+	PVOID Signature,
+	PVOID PublicKey,
+	PVOID Data
+);
+
+EXPORTNUM(345) DLLEXPORT ULONG XBOXAPI XcModExp
+(
+	PULONG pA,
+	PULONG pB,
+	PULONG pC,
+	PULONG pD,
+	ULONG dwN
+);
+
+EXPORTNUM(346) DLLEXPORT VOID XBOXAPI XcDESKeyParity
+(
+	PUCHAR pbKey,
+	ULONG dwKeyLength
+);
+
+EXPORTNUM(347) DLLEXPORT VOID XBOXAPI XcKeyTable
+(
+	ULONG dwCipher,
+	PVOID pKeyTable,
+	PUCHAR pbKey
+);
+
+EXPORTNUM(349) DLLEXPORT VOID XBOXAPI XcBlockCryptCBC
+(
+	ULONG dwCipher,
+	ULONG dwInputLength,
+	PUCHAR pbOutput,
+	PUCHAR pbInput,
+	PVOID pKeyTable,
+	ULONG dwOp,
+	PUCHAR pbFeedback
 );
 
 #ifdef __cplusplus
