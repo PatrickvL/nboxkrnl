@@ -211,3 +211,38 @@ EXPORTNUM(50) NTSTATUS XBOXAPI HalWriteSMBusValue
 
 	return Status;
 }
+
+
+EXPORTNUM(41) UCHAR HalDiskModelNumber[40] = "XXXXXXXX";
+
+EXPORTNUM(42) UCHAR HalDiskSerialNumber[20] = "1234567890123456789";
+
+EXPORTNUM(9) VOID XBOXAPI HalReadSMCTrayState
+(
+	PULONG TrayState,
+	PULONG TrayStateChangeCount
+)
+{
+	// Report tray as closed with media present (0x60 = tray closed, no media; 0x40 = DVD media detected)
+	if (TrayState) {
+		*TrayState = 0x60; // SMC_TRAY_STATE_MEDIA_DETECT (tray closed)
+	}
+	if (TrayStateChangeCount) {
+		*TrayStateChangeCount = 0;
+	}
+}
+
+EXPORTNUM(358) BOOLEAN XBOXAPI HalIsResetOrShutdownPending()
+{
+	return FALSE;
+}
+
+EXPORTNUM(360) VOID XBOXAPI HalInitiateShutdown()
+{
+	RIP_API_MSG("shutting down");
+}
+
+EXPORTNUM(365) VOID XBOXAPI HalEnableSecureTrayEject()
+{
+	// Stub: no physical tray to secure
+}

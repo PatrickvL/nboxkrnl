@@ -80,7 +80,23 @@ EXPORTNUM(50) DLLEXPORT NTSTATUS XBOXAPI HalWriteSMBusValue
 	ULONG DataValue
 );
 
+EXPORTNUM(9) DLLEXPORT VOID XBOXAPI HalReadSMCTrayState
+(
+	PULONG TrayState,
+	PULONG TrayStateChangeCount
+);
+
+EXPORTNUM(41) DLLEXPORT extern UCHAR HalDiskModelNumber[40];
+
+EXPORTNUM(42) DLLEXPORT extern UCHAR HalDiskSerialNumber[20];
+
 EXPORTNUM(356) DLLEXPORT extern ULONG HalBootSMCVideoMode;
+
+EXPORTNUM(358) DLLEXPORT BOOLEAN XBOXAPI HalIsResetOrShutdownPending();
+
+EXPORTNUM(360) DLLEXPORT VOID XBOXAPI HalInitiateShutdown();
+
+EXPORTNUM(365) DLLEXPORT VOID XBOXAPI HalEnableSecureTrayEject();
 
 #ifdef __cplusplus
 }
