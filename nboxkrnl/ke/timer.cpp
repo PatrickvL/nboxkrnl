@@ -317,8 +317,97 @@ EXPORTNUM(150) BOOLEAN XBOXAPI KeSetTimerEx
 
 VOID XBOXAPI KiTimerExpiration(PKDPC Dpc, PVOID DeferredContext, PVOID SystemArgument1, PVOID SystemArgument2)
 {
-	// TODO
-	RIP_UNIMPLEMENTED();
+	ULARGE_INTEGER InterruptTime;
+	LARGE_INTEGER Interval;
+	LONG i;
+	ULONG DpcCalls = 0;
+	PKTIMER Timer;
+	PKDPC TimerDpc;
+	ULONG Period;
+	DPC_QUEUE_ENTRY DpcEntry[MAX_TIMER_DPCS];
+
+	ULARGE_INTEGER SystemTime;
+	KeQuerySystemTime((PLARGE_INTEGER)&SystemTime);
+	InterruptTime.QuadPart = KeQueryInterruptTime();
+
+	ULONG OldKeTickCount = (ULONG)(ULONG_PTR)SystemArgument1;
+	ULONG EndKeTickCount = (ULONG)(ULONG_PTR)SystemArgument2;
+
+	KIRQL OldIrql = KeRaiseIrqlToDpcLevel();
+
+	for (ULONG Tick = OldKeTickCount; Tick < EndKeTickCount; ++Tick) {
+		ULONG Index = Tick & (TIMER_TABLE_SIZE - 1);
+		PLIST_ENTRY ListHead = &KiTimerTableListHead[Index];
+		PLIST_ENTRY NextEntry = ListHead->Flink;
+
+		while (NextEntry != ListHead) {
+			Timer = CONTAINING_RECORD(NextEntry, KTIMER, TimerListEntry);
+			NextEntry = NextEntry->Flink;
+
+			if ((ULONGLONG)Timer->DueTime.QuadPart <= InterruptTime.QuadPart) {
+				KiRemoveTimer(Timer);
+
+				Timer->Header.SignalState = 1;
+
+				TimerDpc = Timer->Dpc;
+				Period = Timer->Period;
+
+				if (!IsListEmpty(&Timer->Header.WaitListHead)) {
+					KiWaitTest(Timer, PRIORITY_BOOST_TIMER);
+				}
+
+				if (Period) {
+					Interval.QuadPart = Period * -10000LL;
+					while (!KiInsertTimer(Timer, Interval));
+				}
+
+				if (TimerDpc) {
+					DpcEntry[DpcCalls].Dpc = TimerDpc;
+					DpcEntry[DpcCalls].Routine = TimerDpc->DeferredRoutine;
+					DpcEntry[DpcCalls].Context = TimerDpc->DeferredContext;
+					DpcCalls++;
+					assert(DpcCalls < MAX_TIMER_DPCS);
+				}
+
+				if (DpcCalls >= MAX_TIMER_DPCS) {
+					KiUnlockDispatcherDatabase(DISPATCH_LEVEL);
+
+					for (i = 0; (ULONG)i < DpcCalls; i++) {
+						DpcEntry[i].Routine(
+							DpcEntry[i].Dpc,
+							DpcEntry[i].Context,
+							(PVOID)(ULONG_PTR)SystemTime.u.LowPart,
+							(PVOID)(ULONG_PTR)SystemTime.u.HighPart
+						);
+					}
+
+					DpcCalls = 0;
+					OldIrql = KeRaiseIrqlToDpcLevel();
+				}
+			}
+			else {
+				break;
+			}
+		}
+	}
+
+	if (DpcCalls) {
+		KiUnlockDispatcherDatabase(DISPATCH_LEVEL);
+
+		for (i = 0; (ULONG)i < DpcCalls; i++) {
+			DpcEntry[i].Routine(
+				DpcEntry[i].Dpc,
+				DpcEntry[i].Context,
+				(PVOID)(ULONG_PTR)SystemTime.u.LowPart,
+				(PVOID)(ULONG_PTR)SystemTime.u.HighPart
+			);
+		}
+
+		KfLowerIrql(OldIrql);
+	}
+	else {
+		KiUnlockDispatcherDatabase(OldIrql);
+	}
 }
 
 
