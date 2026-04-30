@@ -221,6 +221,51 @@ VOID XBOXAPI XbeStartupThread(PVOID Opaque)
 		KeBugCheck(XBE_LAUNCH_FAILED);
 	}
 
+	// Initialize TLS for this thread from the XBE's TLS directory.
+	// The XBE's dwTLSAddr points to an IMAGE_TLS_DIRECTORY32-like structure:
+	//   +0x00: StartAddressOfRawData (VA)
+	//   +0x04: EndAddressOfRawData (VA)
+	//   +0x08: AddressOfIndex (VA)
+	//   +0x0C: AddressOfCallBacks (VA)
+	//   +0x10: SizeOfZeroFill
+	//   +0x14: Characteristics
+	ULONG TlsDirAddr = GetXbeAddress()->dwTLSAddr;
+	if (TlsDirAddr) {
+		struct {
+			ULONG RawDataStart;
+			ULONG RawDataEnd;
+			ULONG AddressOfIndex;
+			ULONG AddressOfCallBacks;
+			ULONG SizeOfZeroFill;
+			ULONG Characteristics;
+		} *TlsDir = (decltype(TlsDir))TlsDirAddr;
+
+		ULONG RawSize = TlsDir->RawDataEnd - TlsDir->RawDataStart;
+		ULONG TotalSize = RawSize + TlsDir->SizeOfZeroFill;
+
+		if (TotalSize > 0) {
+			// Allocate TLS data block via pool (lives for thread lifetime)
+			PVOID TlsData = ExAllocatePoolWithTag(TotalSize, 'slT ');
+			if (TlsData) {
+				// Copy raw TLS template data
+				if (RawSize > 0) {
+					memcpy(TlsData, (PVOID)TlsDir->RawDataStart, RawSize);
+				}
+				// Zero-fill remainder
+				if (TlsDir->SizeOfZeroFill > 0) {
+					memset((PCHAR)TlsData + RawSize, 0, TlsDir->SizeOfZeroFill);
+				}
+				// Attach to current thread
+				KeGetCurrentThread()->TlsData = TlsData;
+			}
+		}
+
+		// Write TLS index = 0 (single-slot TLS on Xbox)
+		if (TlsDir->AddressOfIndex) {
+			*(ULONG *)TlsDir->AddressOfIndex = 0;
+		}
+	}
+
 	// Call the entry point of the XBE!
 	using PXBE_ENTRY_POINT = VOID(__cdecl *)();
 	PXBE_ENTRY_POINT XbeEntryPoint = (PXBE_ENTRY_POINT)(GetXbeAddress()->dwEntryAddr);
