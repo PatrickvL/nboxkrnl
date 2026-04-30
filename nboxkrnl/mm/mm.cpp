@@ -258,7 +258,7 @@ BOOLEAN MmInitSystem()
 		return FALSE;
 	}
 
-	MiLastFree = GetVADNode(LOWEST_USER_ADDRESS);
+	MiLastFree = GetVADNode(HIGHEST_USER_ADDRESS);
 
 	return TRUE;
 }

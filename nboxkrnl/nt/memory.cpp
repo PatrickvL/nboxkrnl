@@ -11,54 +11,25 @@
 
 static ULONG MapMemoryBlock(ULONG Size, ULONG HighestAddress)
 {
+	// Xbox kernel allocates top-down: search from high addresses toward low addresses.
+	// Start from MiLastFree and search backward first, then forward if needed.
+
 	VAD_NODE *Node = MiLastFree;
-	VAD_NODE *EndNode = GetNextVAD(GetVADNode(HighestAddress));
-
-	while (Node != EndNode) {
-		if (Node->m_Vad.m_Type != Free) { // already reserved
-			Node = GetNextVAD(Node);
-			continue;
-		}
-
-		ULONG Addr = Node->m_Start;
-		if (!CHECK_ALIGNMENT(Addr, X64K)) {
-			// Addr is not aligned with the xbox granularity, jump to the next granularity boundary
-			Addr = ROUND_UP(Addr, X64K);
-		}
-
-		// Make sure that the end address of this allocation won't exceed HighestAddress
-		ULONG VadEnd = Node->m_Start + Node->m_Vad.m_Size;
-		if (VadEnd > (HighestAddress + 1)) {
-			VadEnd = HighestAddress + 1;
-		}
-
-		if ((Addr + Size - 1) < VadEnd) {
-			return Addr;
-		}
-
-		Node = GetNextVAD(Node);
-	}
-
-	// If we are here, it means we reached the end of the user region. In desperation, we also try to map it from
-	// MiLastFree and going backwards, since there could be holes created by deallocation operations...
-
 	VAD_NODE *BeginNode = GetVADNode(LOWEST_USER_ADDRESS);
-	if (MiLastFree == BeginNode) {
-		return 0;
-	}
 
-	Node = GetPrevVAD(MiLastFree);
+	// Search backward from MiLastFree (top-down)
 	while (true) {
 		if (Node->m_Vad.m_Type == Free) {
-			ULONG Addr = Node->m_Start;
-			if (!CHECK_ALIGNMENT(Addr, X64K)) {
-				// Addr is not aligned with the xbox granularity, jump to the next granularity boundary
-				Addr = ROUND_UP(Addr, X64K);
+			ULONG VadEnd = Node->m_Start + Node->m_Vad.m_Size;
+			if (VadEnd > (HighestAddress + 1)) {
+				VadEnd = HighestAddress + 1;
 			}
 
-			ULONG VadEnd = Node->m_Start + Node->m_Vad.m_Size;
-			if ((Addr + Size - 1) < VadEnd) {
-				return Addr;
+			if (VadEnd >= Size) {
+				ULONG Addr = ROUND_DOWN(VadEnd - Size, X64K);
+				if (Addr >= Node->m_Start) {
+					return Addr;
+				}
 			}
 		}
 
@@ -67,6 +38,28 @@ static ULONG MapMemoryBlock(ULONG Size, ULONG HighestAddress)
 		}
 
 		Node = GetPrevVAD(Node);
+	}
+
+	// If backward search failed, search forward from MiLastFree
+	Node = GetNextVAD(MiLastFree);
+	VAD_NODE *EndNode = GetNextVAD(GetVADNode(HighestAddress));
+
+	while (Node != EndNode) {
+		if (Node->m_Vad.m_Type == Free) {
+			ULONG VadEnd = Node->m_Start + Node->m_Vad.m_Size;
+			if (VadEnd > (HighestAddress + 1)) {
+				VadEnd = HighestAddress + 1;
+			}
+
+			if (VadEnd >= Size) {
+				ULONG Addr = ROUND_DOWN(VadEnd - Size, X64K);
+				if (Addr >= Node->m_Start) {
+					return Addr;
+				}
+			}
+		}
+
+		Node = GetNextVAD(Node);
 	}
 
 	return 0;
