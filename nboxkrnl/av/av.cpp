@@ -228,7 +228,24 @@ EXPORTNUM(3) ULONG XBOXAPI AvSetDisplayMode
 	ULONG FrameBuffer
 )
 {
-	// Stub: display mode setup is handled by the host
+	// Write PCRTC_START: tells the display controller where to scan out from.
+	// RegisterBase = NV2A MMIO base (0xFD000000), PCRTC_START offset = 0x600800.
+	volatile ULONG* pcrtc_start = (volatile ULONG*)((ULONG_PTR)RegisterBase + 0x600800);
+	*pcrtc_start = FrameBuffer;
+
+	// Write display config to PCRTC_CONFIG (offset 0x600804).
+	// Bits [1:0] = bpp selector: 1=8bpp, 2=16bpp, 3=32bpp.
+	ULONG bpp_sel;
+	switch (Format) {
+	case 0x05: bpp_sel = 2; break;  // LIN_R5G6B5
+	case 0x07: bpp_sel = 3; break;  // LIN_X1R5G5B5 (treated as 16-bit but Xbox uses 32-bit path)
+	case 0x12: bpp_sel = 3; break;  // LIN_A8R8G8B8
+	case 0x11: bpp_sel = 3; break;  // LIN_X8R8G8B8
+	default:   bpp_sel = 3; break;  // Default to 32-bit
+	}
+	volatile ULONG* pcrtc_config = (volatile ULONG*)((ULONG_PTR)RegisterBase + 0x600804);
+	*pcrtc_config = bpp_sel | (Pitch << 16);  // Encode pitch in upper 16 bits
+
 	return STATUS_SUCCESS;
 }
 
