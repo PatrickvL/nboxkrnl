@@ -56,7 +56,15 @@ VOID KiInitializeProcess(PKPROCESS Process, KPRIORITY BasePriority, LONG ThreadQ
 	Process->ThreadQuantum = ThreadQuantum;
 }
 
-VOID KiIdleLoopThread()
+VOID __declspec(naked) KiIdleLoopThread()
 {
-	RIP_UNIMPLEMENTED();
+	// Minimal idle loop: enable interrupts and halt.
+	// When an interrupt fires, the ISR + DPC path in interrupt.cpp handles
+	// thread switching if NextThread becomes non-NULL.
+	__asm {
+	idle_loop:
+		sti
+		hlt
+		jmp idle_loop
+	}
 }
