@@ -237,7 +237,7 @@ target_link_libraries(nboxkrnl PUBLIC
 
 set_target_properties(nboxkrnl PROPERTIES
  LINK_FLAGS "
- /BASE:0x80010000 \
+ /BASE:0x80400000 \
  /DYNAMICBASE:NO \
  /FIXED \
  /LARGEADDRESSAWARE \

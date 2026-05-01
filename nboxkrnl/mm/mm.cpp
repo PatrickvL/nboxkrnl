@@ -55,7 +55,7 @@ BOOLEAN MmInitSystem()
 	// Sanity check: make sure our kernel size is below 4 MiB. A real uncompressed kernel is approximately 1.2 MiB large
 	ULONG PdeNumber = PAGES_SPANNED_LARGE(KERNEL_BASE, KernelSize);
 	PdeNumber = PAGES_SPANNED_LARGE(KERNEL_BASE, (PdeNumber + RequiredPt) * PAGE_SIZE + KernelSize); // also count the space needed for the pts
-	if ((KERNEL_BASE + KernelSize + PdeNumber * PAGE_SIZE) >= 0x80400000) {
+	if ((KERNEL_BASE + KernelSize + PdeNumber * PAGE_SIZE) >= 0x80800000) {
 		return FALSE;
 	}
 

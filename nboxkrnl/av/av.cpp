@@ -205,6 +205,15 @@ EXPORTNUM(2) VOID XBOXAPI AvSendTVEncoderOption
 		AvpSetLumaFilter(Param);
 		break;
 
+	case AV_OPTION_MACROVISION_MODE:
+	case AV_OPTION_BLANK_SCREEN:
+	case AV_OPTION_ZERO_MODE:
+	case AV_OPTION_GUESS_FIELD:
+	case AV_OPTION_CGMS:
+	case AV_OPTION_WIDESCREEN:
+		// Stubbed - no-op on emulator
+		break;
+
 	default:
 		RIP_API_FMT("Option 0x%08X with Param 0x%08X not implemented!", Option, Param);
 	}

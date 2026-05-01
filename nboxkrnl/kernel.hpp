@@ -38,7 +38,7 @@
 #define KE_ACPI_TIME_HIGH 0x210
 
 #define KERNEL_STACK_SIZE 12288
-#define KERNEL_BASE 0x80010000
+#define KERNEL_BASE 0x80400000
 
 // Host device number
 #define DEV_CDROM      0

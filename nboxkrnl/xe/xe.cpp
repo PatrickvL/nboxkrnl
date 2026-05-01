@@ -60,6 +60,7 @@ static NTSTATUS XeLoadXbe()
 
 		PCHAR PathBuffer = (PCHAR)ExAllocatePoolWithTag(PathSize, 'PebX');
 		if (!PathBuffer) {
+			DbgPrint("XeLoadXbe: failed to alloc path buffer\n");
 			return STATUS_INSUFFICIENT_RESOURCES;
 		}
 
@@ -75,17 +76,20 @@ static NTSTATUS XeLoadXbe()
 		HANDLE XbeHandle;
 		if (NTSTATUS Status = NtOpenFile(&XbeHandle, GENERIC_READ, &ObjectAttributes, &IoStatusBlock, FILE_SHARE_READ,
 			FILE_SYNCHRONOUS_IO_NONALERT | FILE_NON_DIRECTORY_FILE); !NT_SUCCESS(Status)) {
+			DbgPrint("XeLoadXbe: NtOpenFile failed 0x%X\n", Status);
 			return Status;
 		}
 
 		PXBE_HEADER XbeHeader = (PXBE_HEADER)ExAllocatePoolWithTag(PAGE_SIZE, 'hIeX');
 		if (!XbeHeader) {
+			DbgPrint("XeLoadXbe: failed to alloc XBE header\n");
 			return STATUS_INSUFFICIENT_RESOURCES;
 		}
 
 		LARGE_INTEGER XbeOffset{ .QuadPart = 0 };
 		if (NTSTATUS Status = NtReadFile(XbeHandle, nullptr, nullptr, nullptr, &IoStatusBlock,
 			XbeHeader, PAGE_SIZE, &XbeOffset); !NT_SUCCESS(Status)) {
+			DbgPrint("XeLoadXbe: NtReadFile header failed 0x%X\n", Status);
 			ExFreePool(XbeHeader);
 			NtClose(XbeHandle);
 			return Status;
@@ -96,6 +100,8 @@ static NTSTATUS XeLoadXbe()
 			(XbeHeader->dwMagic != *(PULONG)"XBEH") ||
 			(XbeHeader->dwSizeofHeaders > XbeHeader->dwSizeofImage) ||
 			(XbeHeader->dwBaseAddr != XBE_BASE_ADDRESS)) {
+			DbgPrint("XeLoadXbe: XBE sanity check failed (info=%d magic=0x%X hdrSz=0x%X imgSz=0x%X base=0x%X)\n",
+				(ULONG)IoStatusBlock.Information, XbeHeader->dwMagic, XbeHeader->dwSizeofHeaders, XbeHeader->dwSizeofImage, XbeHeader->dwBaseAddr);
 			ExFreePool(XbeHeader);
 			NtClose(XbeHandle);
 			return STATUS_INVALID_IMAGE_FORMAT;
@@ -105,6 +111,7 @@ static NTSTATUS XeLoadXbe()
 		ULONG Size = XbeHeader->dwSizeofImage;
 		NTSTATUS Status = NtAllocateVirtualMemory(&Address, 0, &Size, MEM_RESERVE, PAGE_READWRITE);
 		if (!NT_SUCCESS(Status)) {
+			DbgPrint("XeLoadXbe: reserve failed 0x%X\n", Status);
 			ExFreePool(XbeHeader);
 			NtClose(XbeHandle);
 			return Status;
@@ -114,6 +121,7 @@ static NTSTATUS XeLoadXbe()
 		Size = XbeHeader->dwSizeofHeaders;
 		Status = NtAllocateVirtualMemory(&Address, 0, &Size, MEM_COMMIT, PAGE_READWRITE);
 		if (!NT_SUCCESS(Status)) {
+			DbgPrint("XeLoadXbe: commit headers failed 0x%X\n", Status);
 			Address = GetXbeAddress();
 			Size = 0;
 			NtFreeVirtualMemory(&Address, &Size, MEM_RELEASE);
@@ -174,6 +182,7 @@ static NTSTATUS XeLoadXbe()
 			if (SectionHeaders[i].Flags & XBEIMAGE_SECTION_PRELOAD) {
 				Status = XeLoadSection(&SectionHeaders[i]);
 				if (!NT_SUCCESS(Status)) {
+					DbgPrint("XeLoadXbe: section %d load failed 0x%X\n", i, Status);
 					Address = GetXbeAddress();
 					Size = 0;
 					NtFreeVirtualMemory(&Address, &Size, MEM_RELEASE);
