@@ -3,13 +3,13 @@
  * PatrickvL              Copyright (c) 2026
  */
 
+#include "cdrom.hpp"
 #include "ex.hpp"
-#include "rtl.hpp"
-#include "obp.hpp"
-#include "nt.hpp"
 #include "halp.hpp"
-#include "cdrom\cdrom.hpp"
-#include "hdd\hdd.hpp"
+#include "hdd.hpp"
+#include "nt.hpp"
+#include "obp.hpp"
+#include "rtl.hpp"
 #include <string.h>
 
 // IDE channel object stub

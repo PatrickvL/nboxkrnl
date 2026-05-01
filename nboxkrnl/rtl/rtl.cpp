@@ -4,11 +4,11 @@
  * PatrickvL              Copyright (c) 2018
  */
 
+#include "dbg.hpp"
+#include "ex.hpp"
+#include "halp.hpp"
+#include "mm.hpp"
 #include "rtl.hpp"
-#include "..\hal\halp.hpp"
-#include "..\dbg\dbg.hpp"
-#include "..\ex\ex.hpp"
-#include "..\mm\mm.hpp"
 #include <string.h>
 #include <assert.h>
 #include <nanoprintf.h>

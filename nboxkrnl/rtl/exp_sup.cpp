@@ -4,7 +4,7 @@
 
 #include "exp_sup.hpp"
 #include "rtl.hpp"
-#include "..\nt\zw.hpp"
+#include "zw.hpp"
 
 
 static EXCEPTION_DISPOSITION CDECL RtlpNestedExceptionHandler(EXCEPTION_RECORD *pExceptionRecord, EXCEPTION_REGISTRATION_SEH *pRegistrationFrame,
